@@ -1,0 +1,745 @@
+﻿{
+    "PlanningBranch":  [
+                           {
+                               "_row":  1,
+                               "A":  "Project ID",
+                               "B":  "GND ID",
+                               "C":  "GND Name",
+                               "D":  "Project Name",
+                               "E":  "Category",
+                               "F":  "Allocation (Rs. Mn)",
+                               "G":  "Expenditure (Rs. Mn)",
+                               "H":  "Approval Date",
+                               "I":  "Provision Date",
+                               "J":  "Target Completion Date",
+                               "K":  "Current Workflow Stage",
+                               "L":  "Physical Progress (%)",
+                               "M":  "Financial Progress (%)",
+                               "N":  "Responsible Officer",
+                               "O":  "Issues Flag",
+                               "P":  "Issues Description",
+                               "Q":  "Escalation Level",
+                               "R":  "Target Action Date",
+                               "S":  "Remarks"
+                           },
+                           {
+                               "_row":  2,
+                               "C":  "476/T වැවර්ලි",
+                               "D":  "මොනිංටන් පහල කොට‍ස හින්දු කෝවිල් මාර්ගය සංවර්ධනය කිරිම",
+                               "E":  "Rural Road Development ",
+                               "F":  "2398119.36",
+                               "G":  "0",
+                               "H":  "2026.08.06",
+                               "I":  "2026.08.13",
+                               "J":  "2026.10.30",
+                               "K":  "Procurement Process ",
+                               "L":  "0",
+                               "M":  "0",
+                               "N":  "",
+                               "O":  "No",
+                               "Q":  "Normal"
+                           },
+                           {
+                               "_row":  3,
+                               "C":  "475 I හෝල්බෲක්",
+                               "D":  "ෆෙන්කර්ටන් මාර්ගය සංවර්ධනය කිරිම",
+                               "E":  "Rural Road Development ",
+                               "F":  "2327818.61",
+                               "G":  "0",
+                               "H":  "2026.08.06",
+                               "I":  "2026.08.13",
+                               "J":  "2026.10.30",
+                               "K":  "Procurement Process ",
+                               "L":  "0",
+                               "M":  "0",
+                               "N":  "",
+                               "O":  "No",
+                               "Q":  "Normal"
+                           },
+                           {
+                               "_row":  4,
+                               "C":  "475D වටගොඩ",
+                               "D":  "යොක්ස්ෆෝඩ් කොටස මාර්ගය සංවර්ධනය කිරිම (මනිපූර් ලයිම)",
+                               "E":  "Rural Road Development ",
+                               "F":  "2547750.3199999998",
+                               "G":  "0",
+                               "H":  "2026.08.06",
+                               "I":  "2026.08.13",
+                               "J":  "2026.10.30",
+                               "K":  "Procurement Process ",
+                               "L":  "0",
+                               "M":  "0",
+                               "N":  "",
+                               "O":  "No",
+                               "Q":  "Normal"
+                           },
+                           {
+                               "_row":  5,
+                               "C":  "475Z ග්‍රේට්වෙස්ටන්",
+                               "D":  "හොලිරූඩ් ඉහල කොටස මාර්ගය සංවර්ධනය කිරිම",
+                               "E":  "Rural Road Development ",
+                               "F":  "2278052.7400000002",
+                               "G":  "0",
+                               "H":  "2026.08.06",
+                               "I":  "2026.08.13",
+                               "J":  "2026.10.30",
+                               "K":  "Procurement Process ",
+                               "L":  "0",
+                               "M":  "0",
+                               "N":  "",
+                               "O":  "No",
+                               "Q":  "Normal"
+                           },
+                           {
+                               "_row":  6,
+                               "C":  "475 M ස්ටෝනික්ලිෆ්",
+                               "D":  "තැබ්රබේන් මාර්ගය සංවර්ධනය කිරිම",
+                               "E":  "Rural Road Development ",
+                               "F":  "2914778.52",
+                               "G":  "0",
+                               "H":  "2026.08.06",
+                               "I":  "2026.08.13",
+                               "J":  "2026.10.30",
+                               "K":  "Procurement Process ",
+                               "L":  "0",
+                               "M":  "0",
+                               "N":  "",
+                               "O":  "No",
+                               "Q":  "Normal"
+                           },
+                           {
+                               "_row":  7,
+                               "C":  "476/N හෙන්ඩ්ෆෝල්ඩ්",
+                               "D":  "ශා.රෙගුලර්ස් මාර්ගය සංවර්ධනය කිරිම (ශා.රෙගුලර්ස් පාසල අසල)",
+                               "E":  "Rural Road Development ",
+                               "F":  "2320991.88",
+                               "G":  "0",
+                               "H":  "2026.08.06",
+                               "I":  "2026.08.13",
+                               "J":  "2026.10.30",
+                               "K":  "Procurement Process ",
+                               "L":  "0",
+                               "M":  "0",
+                               "N":  "",
+                               "O":  "No",
+                               "Q":  "Normal"
+                           },
+                           {
+                               "_row":  8,
+                               "C":  "476/ R සැන්ඩ්‍රිහැම්",
+                               "D":  "පෝයිස්ලන්ඩ් කොටස මාර්ගය සංවර්ධනය කිරිම",
+                               "E":  "Rural Road Development ",
+                               "F":  "2403918.34",
+                               "G":  "0",
+                               "H":  "2026.08.06",
+                               "I":  "2026.08.13",
+                               "J":  "2026.10.30",
+                               "K":  "Procurement Process ",
+                               "L":  "0",
+                               "M":  "0",
+                               "N":  "",
+                               "O":  "No",
+                               "Q":  "Normal"
+                           },
+                           {
+                               "_row":  9,
+                               "C":  "475R කූම්වුඩ්",
+                               "D":  "කටුකැලේ වත්ත බෝඩ් මාර්ගය සංවර්ධනය කිරිම",
+                               "E":  "Rural Road Development ",
+                               "F":  "2127818.61",
+                               "G":  "0",
+                               "H":  "2026.08.06",
+                               "I":  "2026.08.13",
+                               "J":  "2026.10.30",
+                               "K":  "Procurement Process ",
+                               "L":  "0",
+                               "M":  "0",
+                               "N":  "",
+                               "O":  "No",
+                               "Q":  "Normal"
+                           },
+                           {
+                               "_row":  10,
+                               "C":  "475x බෙයාවෙල්",
+                               "D":  "නානුඔය කෝවිල මාර්ගය සංවර්ධනය කිරිම",
+                               "E":  "Rural Road Development ",
+                               "F":  "2526828.2000000002",
+                               "G":  "0",
+                               "H":  "2026.08.06",
+                               "I":  "2026.08.13",
+                               "J":  "2026.10.30",
+                               "K":  "Procurement Process ",
+                               "L":  "0",
+                               "M":  "0",
+                               "N":  "",
+                               "O":  "No",
+                               "Q":  "Normal"
+                           },
+                           {
+                               "_row":  11,
+                               "C":  "476J ග්ලාස්ගෝ",
+                               "D":  "සටන් මාර්ගය සංවර්ධනය කිරිම",
+                               "E":  "Rural Road Development ",
+                               "F":  "2357088.0499999998",
+                               "G":  "0",
+                               "H":  "2026.08.06",
+                               "I":  "2026.08.13",
+                               "J":  "2026.10.30",
+                               "K":  "Procurement Process ",
+                               "L":  "0",
+                               "M":  "0",
+                               "N":  "",
+                               "O":  "No",
+                               "Q":  "Normal"
+                           },
+                           {
+                               "_row":  12,
+                               "C":  "475V වෝල්ට්‍රීම්",
+                               "D":  "ශාන්ත කුම්ස් මාර්ගය සංවර්ධනය කිරිම",
+                               "E":  "Rural Road Development ",
+                               "F":  "2310257.34",
+                               "G":  "0",
+                               "H":  "2026.08.06",
+                               "I":  "2026.08.13",
+                               "J":  "2026.10.30",
+                               "K":  "Procurement Process ",
+                               "L":  "0",
+                               "M":  "0",
+                               "N":  "",
+                               "O":  "No",
+                               "Q":  "Normal"
+                           },
+                           {
+                               "_row":  13,
+                               "C":  "476/M තංගකැලේ",
+                               "D":  "තංගකැලේ පහළ කොටස CDC මාර්ගය සංවර්ධනය කිරිම",
+                               "E":  "Rural Road Development ",
+                               "F":  "2320991.88",
+                               "G":  "0",
+                               "H":  "2026.08.06",
+                               "I":  "2026.08.13",
+                               "J":  "2026.10.30",
+                               "K":  "Procurement Process ",
+                               "L":  "0",
+                               "M":  "0",
+                               "N":  "",
+                               "O":  "No",
+                               "Q":  "Normal"
+                           },
+                           {
+                               "_row":  14,
+                               "C":  "හොල්බෘාක්",
+                               "D":  "මහාවැලි නිවාස සංකිර්ණ පාර සංවර්ධනය කිරිම",
+                               "E":  "Rural Road Development ",
+                               "F":  "8165624.7800000003",
+                               "G":  "0",
+                               "H":  "2026.08.10",
+                               "I":  "2026.08.06",
+                               "J":  "2026.10.30",
+                               "K":  "Amendment",
+                               "L":  "0",
+                               "M":  "0",
+                               "N":  "",
+                               "O":  "Yes",
+                               "P":  "Pending approval for project amendment.",
+                               "Q":  "High",
+                               "R":  "2026.09.03",
+                               "S":  "Submitted to District Secretariat for amendment approval."
+                           },
+                           {
+                               "_row":  15,
+                               "C":  "කොටගල",
+                               "D":  "කොටගල ශක්තිපුරම් මාර්ගය සංවර්ධනය කිරිම",
+                               "E":  "Rural Road Development ",
+                               "F":  "3000000",
+                               "G":  "0",
+                               "H":  "2026.08.03",
+                               "I":  "2026.08.17",
+                               "J":  "2026.10.30",
+                               "K":  "Procurement Process ",
+                               "L":  "0",
+                               "M":  "0",
+                               "N":  "",
+                               "O":  "No",
+                               "Q":  "Normal"
+                           },
+                           {
+                               "_row":  16,
+                               "C":  "බැල්මොරල්",
+                               "D":  "බැල්මෝරල් වත්ත කෝවිල් මාර්ගය සංවර්ධනය කිරිම",
+                               "E":  "Rural Road Development ",
+                               "F":  "3000000",
+                               "G":  "0",
+                               "H":  "2026.08.03",
+                               "I":  "2026.08.17",
+                               "J":  "2026.10.30",
+                               "K":  "Procurement Process ",
+                               "L":  "0",
+                               "M":  "0",
+                               "N":  "",
+                               "O":  "No",
+                               "Q":  "Normal"
+                           },
+                           {
+                               "_row":  17,
+                               "C":  "හෙන්ෆෝල්ඩ්",
+                               "D":  "ගැන්ගල්ස් මාර්ගය සංවර්ධන කිරිම",
+                               "E":  "Rural Road Development ",
+                               "F":  "3000000",
+                               "G":  "0",
+                               "H":  "2026.08.03",
+                               "I":  "2026.08.17",
+                               "J":  "2026.10.30",
+                               "K":  "Procurement Process ",
+                               "L":  "0",
+                               "M":  "0",
+                               "N":  "",
+                               "O":  "No",
+                               "Q":  "Normal"
+                           },
+                           {
+                               "_row":  18,
+                               "C":  "වෝල්ට්‍රිම්",
+                               "D":  "කොනන් සිට ලිදුල මාර්ගය සංවර්ධනය කිරිම",
+                               "E":  "Rural Road Development ",
+                               "F":  "3000000",
+                               "G":  "0",
+                               "H":  "2026.08.03",
+                               "I":  "2026.08.17",
+                               "J":  "2026.10.30",
+                               "K":  "Procurement Process ",
+                               "L":  "0",
+                               "M":  "0",
+                               "N":  "",
+                               "O":  "No",
+                               "Q":  "Normal"
+                           },
+                           {
+                               "_row":  19,
+                               "C":  "තලවකැලේ",
+                               "D":  "තලවාකැලේ වත්ත මාර්ගය සංවර්ධනය කිරිම",
+                               "E":  "Rural Road Development ",
+                               "F":  "2500000",
+                               "G":  "0",
+                               "H":  "2026.08.03",
+                               "I":  "2026.08.17",
+                               "J":  "2026.10.30",
+                               "K":  "Amendment",
+                               "L":  "0",
+                               "M":  "0",
+                               "N":  "",
+                               "O":  "Yes",
+                               "P":  "Pending approval for project amendment.",
+                               "Q":  "High",
+                               "R":  "2026.09.03",
+                               "S":  "Submitted to District Secretariat for amendment approval."
+                           },
+                           {
+                               "_row":  20,
+                               "C":  "හොලිරූඩ්",
+                               "D":  "රත්නිල්ලගල මාර්ගය සංවර්ධනය කිරිම",
+                               "E":  "Rural Road Development ",
+                               "F":  "3000000",
+                               "G":  "0",
+                               "H":  "2026.08.03",
+                               "I":  "2026.08.17",
+                               "J":  "2026.10.30",
+                               "K":  "Procurement Process ",
+                               "L":  "0",
+                               "M":  "0",
+                               "N":  "",
+                               "O":  "No",
+                               "Q":  "Normal"
+                           },
+                           {
+                               "_row":  21,
+                               "C":  "කුඩුඔය",
+                               "D":  "ලොක්හිල් සිට හෙරින්ටන් කොලනිය පාර සංවර්ධනය කිරිම",
+                               "E":  "Rural Road Development ",
+                               "F":  "3000000",
+                               "G":  "0",
+                               "H":  "2026.08.03",
+                               "I":  "2026.08.17",
+                               "J":  "2026.10.30",
+                               "K":  "Procurement Process ",
+                               "L":  "0",
+                               "M":  "0",
+                               "N":  "",
+                               "O":  "No",
+                               "Q":  "Normal"
+                           },
+                           {
+                               "_row":  22,
+                               "C":  "වටගොඩ",
+                               "D":  "වටගොඩ පහළ කොටස මාර්ගය සංවර්ධනය කිරිම",
+                               "E":  "Rural Road Development ",
+                               "F":  "3000000",
+                               "G":  "0",
+                               "H":  "2026.08.03",
+                               "I":  "2026.08.17",
+                               "J":  "2026.10.30",
+                               "K":  "Amendment",
+                               "L":  "0",
+                               "M":  "0",
+                               "N":  "",
+                               "O":  "Yes",
+                               "P":  "Pending approval for project amendment.",
+                               "Q":  "High",
+                               "R":  "2026.09.03",
+                               "S":  "Submitted to District Secretariat for amendment approval."
+                           },
+                           {
+                               "_row":  23,
+                               "C":  "ඩයගම නැගෙනහිර",
+                               "D":  "ඩයගම නැගෙනහිර 1 කොටස කෝවිල් මාර්ගය සංවර්ධනය කිරිම",
+                               "E":  "Rural Road Development ",
+                               "F":  "3000000",
+                               "G":  "0",
+                               "H":  "2026.08.03",
+                               "I":  "2026.08.17",
+                               "J":  "2026.10.30",
+                               "K":  "Procurement Process ",
+                               "L":  "0",
+                               "M":  "0",
+                               "N":  "",
+                               "O":  "No",
+                               "Q":  "Normal"
+                           },
+                           {
+                               "_row":  24,
+                               "C":  "කූම්වුඩ්",
+                               "D":  "Glanamera මාර්ගය සංවර්ධනය කිරිම",
+                               "E":  "Rural Road Development ",
+                               "F":  "3000000",
+                               "G":  "0",
+                               "H":  "2026.08.03",
+                               "I":  "2026.08.17",
+                               "J":  "2026.10.30",
+                               "K":  "Procurement Process ",
+                               "L":  "0",
+                               "M":  "0",
+                               "N":  "",
+                               "O":  "No",
+                               "Q":  "Normal"
+                           }
+                       ],
+    "CEONames":  [
+                     {
+                         "_row":  1,
+                         "A":  "GND Name",
+                         "B":  "CEO Name ",
+                         "C":  "Phone number"
+                     },
+                     {
+                         "_row":  2,
+                         "A":  "476/T Waverley",
+                         "B":  "S.Yogeswaran"
+                     },
+                     {
+                         "_row":  3,
+                         "A":  "475/F lindula ",
+                         "B":  "D.sinthuja"
+                     },
+                     {
+                         "_row":  4,
+                         "A":  "476 Q Belmoral",
+                         "B":  "P.Premkumar"
+                     },
+                     {
+                         "_row":  5,
+                         "A":  "Eildenhall 475T ",
+                         "B":  "R.Karthic "
+                     },
+                     {
+                         "_row":  6,
+                         "A":  "475 I Holbrook",
+                         "B":  "I.johara bee bee"
+                     },
+                     {
+                         "_row":  7,
+                         "A":  "475/H NAGASENA ",
+                         "B":  "I. THANALINY "
+                     },
+                     {
+                         "_row":  8,
+                         "A":  "476/k Albion",
+                         "B":  " A.Rosary Fernando "
+                     },
+                     {
+                         "_row":  9,
+                         "A":  "475 kotagala ",
+                         "B":  "S.Revathy"
+                     },
+                     {
+                         "_row":  10,
+                         "A":  "475 Z Greatwestern",
+                         "B":  "K.yogarajan"
+                     },
+                     {
+                         "_row":  11,
+                         "A":  "475K agarapatana ",
+                         "B":  "S.vickneshwaran"
+                     },
+                     {
+                         "_row":  12,
+                         "A":  "475U Rahanwatta ",
+                         "B":  "G. Puwaneswary "
+                     },
+                     {
+                         "_row":  13,
+                         "A":  "475/S hollyrood",
+                         "B":  "R. Mohanasundary"
+                     },
+                     {
+                         "_row":  14,
+                         "A":  "475/B Dimbula Patana",
+                         "B":  "A.C.R John "
+                     },
+                     {
+                         "_row":  15,
+                         "A":  "475/N, Drayton",
+                         "B":  "S.Nishanthy"
+                     },
+                     {
+                         "_row":  16,
+                         "A":  "476/S Dayagama East",
+                         "B":  "N.K.Samantha Lakmal"
+                     },
+                     {
+                         "_row":  17,
+                         "A":  "475Y Yullifield ",
+                         "B":  "V.Umadevi"
+                     },
+                     {
+                         "_row":  18,
+                         "A":  "475/J Elbeddha ",
+                         "B":  "R. Dayani "
+                     },
+                     {
+                         "_row":  19,
+                         "A":  "Dayagama west 475/L",
+                         "B":  "M.Kanahamani"
+                     },
+                     {
+                         "_row":  20,
+                         "A":  "Henfold 476/N",
+                         "B":  "M.Kaviyarasu ",
+                         "C":  "+94 77 028 0816"
+                     },
+                     {
+                         "_row":  21,
+                         "A":  "475/Q MOUNTVERNON",
+                         "B":  "S.S.SUTHAJINI "
+                     },
+                     {
+                         "_row":  22,
+                         "A":  "475P Bogahawatha ",
+                         "B":  "M.Prabukala"
+                     },
+                     {
+                         "_row":  23,
+                         "A":  "Devon 475/C",
+                         "B":  "G. Nalayini "
+                     },
+                     {
+                         "_row":  24,
+                         "A":  "475E Talawakelle ",
+                         "B":  "S.Jeyamathi"
+                     },
+                     {
+                         "_row":  25,
+                         "A":  "475D Watagoda",
+                         "B":  "J.Nalendran "
+                     },
+                     {
+                         "_row":  26,
+                         "A":  "476J Glasgow         ",
+                         "B":  "RMKU Rathnayaka "
+                     },
+                     {
+                         "_row":  27,
+                         "A":  "476/M Thangakelle ",
+                         "B":  "M.Nalini"
+                     },
+                     {
+                         "_row":  28,
+                         "A":  "475R Coombwood ",
+                         "B":  "T.Naguleswary "
+                     },
+                     {
+                         "_row":  29,
+                         "A":  "Lipakelle",
+                         "B":  "S .shivagowreiy "
+                     },
+                     {
+                         "_row":  30,
+                         "A":  "476/R Sandringham ",
+                         "B":  " M. Chandrasegaran "
+                     },
+                     {
+                         "_row":  31,
+                         "A":  "475 M Stonycliff ",
+                         "B":  "S.Kamalahasan"
+                     },
+                     {
+                         "_row":  32,
+                         "A":  "476/ R Sandringham ",
+                         "B":  "M. Chandrasegaran "
+                     },
+                     {
+                         "_row":  33,
+                         "A":  "475x Bearwell ",
+                         "B":  "M.devika"
+                     },
+                     {
+                         "_row":  34,
+                         "A":  "476 P Breamore",
+                         "B":  "Sumith"
+                     },
+                     {
+                         "_row":  35,
+                         "A":  "475 A Kuduoya",
+                         "B":  "Chamila"
+                     }
+                 ],
+    "Categories":  [
+                       {
+                           "_row":  1,
+                           "A":  "Project Catergory"
+                       },
+                       {
+                           "_row":  2,
+                           "A":  "Rural Road Development"
+                       },
+                       {
+                           "_row":  3,
+                           "A":  "DCB"
+                       },
+                       {
+                           "_row":  4,
+                           "A":  "Prajashakthi (VDP)"
+                       },
+                       {
+                           "_row":  5,
+                           "A":  "Prajashakthi (Mega)"
+                       },
+                       {
+                           "_row":  6,
+                           "A":  "Prajashakthi – Livelihood Development"
+                       },
+                       {
+                           "_row":  7,
+                           "A":  "Prajashakthi – Infrastructure Development"
+                       }
+                   ],
+    "Workflows":  [
+                      {
+                          "_row":  1,
+                          "A":  "Workflow Status "
+                      },
+                      {
+                          "_row":  2,
+                          "A":  ""
+                      },
+                      {
+                          "_row":  3,
+                          "A":  "1. Project Identification "
+                      },
+                      {
+                          "_row":  4,
+                          "A":  ""
+                      },
+                      {
+                          "_row":  5,
+                          "A":  "2. Proposal Preparation"
+                      },
+                      {
+                          "_row":  6,
+                          "A":  ""
+                      },
+                      {
+                          "_row":  7,
+                          "A":  "3. Feasibility Study "
+                      },
+                      {
+                          "_row":  8,
+                          "A":  ""
+                      },
+                      {
+                          "_row":  9,
+                          "A":  "4. Estimate Not Prepared "
+                      },
+                      {
+                          "_row":  10,
+                          "A":  ""
+                      },
+                      {
+                          "_row":  11,
+                          "A":  "5. Estimate Prepared"
+                      },
+                      {
+                          "_row":  12,
+                          "A":  ""
+                      },
+                      {
+                          "_row":  13,
+                          "A":  "6. Approval Pending "
+                      },
+                      {
+                          "_row":  14,
+                          "A":  ""
+                      },
+                      {
+                          "_row":  15,
+                          "A":  "7. Approved / Provision Received "
+                      },
+                      {
+                          "_row":  16,
+                          "A":  ""
+                      },
+                      {
+                          "_row":  17,
+                          "A":  "8. Procurement "
+                      },
+                      {
+                          "_row":  18,
+                          "A":  ""
+                      },
+                      {
+                          "_row":  19,
+                          "A":  "9. Agreement Pending "
+                      },
+                      {
+                          "_row":  20,
+                          "A":  ""
+                      },
+                      {
+                          "_row":  21,
+                          "A":  "10. Agreement Signed "
+                      },
+                      {
+                          "_row":  22,
+                          "A":  ""
+                      },
+                      {
+                          "_row":  23,
+                          "A":  "11. Work Started "
+                      },
+                      {
+                          "_row":  24,
+                          "A":  ""
+                      },
+                      {
+                          "_row":  25,
+                          "A":  "12. Work Ongoing "
+                      },
+                      {
+                          "_row":  26,
+                          "A":  ""
+                      },
+                      {
+                          "_row":  27,
+                          "A":  "13. Completed "
+                      }
+                  ]
+}
