@@ -9,7 +9,6 @@ import {
   FileText,
   Plus,
   Tag,
-  MapPin,
   UserCheck,
   Download,
   RotateCcw,
@@ -111,11 +110,10 @@ export default function Navbar({ activeTab, setActiveTab }) {
             <div className="relative">
               <button
                 onClick={() => setShowDemoMenu(!showDemoMenu)}
-                className={`flex items-center space-x-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-all ${
-                  isDemoData
-                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30'
-                    : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 hover:bg-emerald-500/30'
-                }`}
+                className={`flex items-center space-x-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-all ${isDemoData
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30'
+                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 hover:bg-emerald-500/30'
+                  }`}
                 title="Click to manage mock or live register data"
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
@@ -209,9 +207,8 @@ export default function Navbar({ activeTab, setActiveTab }) {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`gov-nav-tab flex items-center space-x-2 px-4 py-2.5 text-xs sm:text-sm font-semibold whitespace-nowrap ${
-                  isActive ? 'active' : ''
-                }`}
+                className={`gov-nav-tab flex items-center space-x-2 px-4 py-2.5 text-xs sm:text-sm font-semibold whitespace-nowrap ${isActive ? 'active' : ''
+                  }`}
               >
                 <Icon className={`w-4 h-4 ${isActive ? 'text-amber-400' : 'text-slate-400'}`} />
                 <span>{item.label}</span>
