@@ -15,21 +15,22 @@ import {
 
 export default function EvidenceGallery() {
   const {
-    evidence,
-    projects,
-    setIsAddEvidenceOpen,
-    setEvidenceTargetProjectId,
-    openProjectDetail
-  } = useProject();
+    evidence = [],
+    projects = [],
+    setIsAddEvidenceOpen = () => {},
+    setEvidenceTargetProjectId = () => {},
+    openProjectDetail = () => {}
+  } = useProject() || {};
 
   const [phaseFilter, setPhaseFilter] = useState('all');
   const [selectedProjectId, setSelectedProjectId] = useState('all');
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
 
   // Filter evidence
-  const filteredEvidence = evidence.filter(item => {
-    if (phaseFilter !== 'all' && item.activity !== phaseFilter) return false;
-    if (selectedProjectId !== 'all' && item.projectId !== selectedProjectId) return false;
+  const filteredEvidence = (evidence || []).filter(item => {
+    if (!item) return false;
+    if (phaseFilter !== 'all' && item?.activity !== phaseFilter) return false;
+    if (selectedProjectId !== 'all' && item?.projectId !== selectedProjectId) return false;
     return true;
   });
 
@@ -47,8 +48,8 @@ export default function EvidenceGallery() {
   };
 
   const handleAddPhoto = () => {
-    setEvidenceTargetProjectId(selectedProjectId !== 'all' ? selectedProjectId : projects[0]?.id);
-    setIsAddEvidenceOpen(true);
+    setEvidenceTargetProjectId?.(selectedProjectId !== 'all' ? selectedProjectId : (projects || [])[0]?.id);
+    setIsAddEvidenceOpen?.(true);
   };
 
   return (
@@ -106,10 +107,10 @@ export default function EvidenceGallery() {
             onChange={(e) => setSelectedProjectId(e.target.value)}
             className="py-1.5 px-3 rounded-lg bg-slate-800 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
           >
-            <option value="all">All Projects ({projects.length})</option>
-            {projects.map(p => (
-              <option key={p.id} value={p.id}>
-                {p.id} - {p.name.slice(0, 30)}...
+            <option value="all">All Projects ({(projects || []).length})</option>
+            {(projects || []).map(p => (
+              <option key={p?.id} value={p?.id}>
+                {p?.id} - {(p?.name || p?.title || '').slice(0, 30)}...
               </option>
             ))}
           </select>
@@ -117,7 +118,7 @@ export default function EvidenceGallery() {
       </div>
 
       {/* Photo Grid */}
-      {filteredEvidence.length === 0 ? (
+      {(filteredEvidence || []).length === 0 ? (
         <div className="glass-panel p-12 text-center rounded-2xl border border-slate-800 space-y-2">
           <Camera className="w-10 h-10 text-slate-500 mx-auto" />
           <h3 className="text-base font-bold text-white">No Photographic Evidence Found</h3>
@@ -128,10 +129,13 @@ export default function EvidenceGallery() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredEvidence.map(item => {
-            const proj = projects.find(p => p.id === item.projectId);
+            const proj = (projects || []).find(p => p?.id === item?.projectId);
+            const itemId = item?.id || 'EVD';
+            const itemPhotoUrl = item?.imageUrl || "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=800&q=80";
+
             return (
               <div
-                key={item.id}
+                key={itemId}
                 className="glass-panel rounded-2xl border border-slate-800 overflow-hidden group hover:border-emerald-500/40 transition-all flex flex-col justify-between"
               >
                 {/* Image Container with Zoom Trigger */}
@@ -140,16 +144,16 @@ export default function EvidenceGallery() {
                   className="relative h-48 w-full bg-slate-900 cursor-pointer overflow-hidden"
                 >
                   <img
-                    src={item.imageUrl}
-                    alt={item.description}
+                    src={itemPhotoUrl}
+                    alt={item?.description || 'Site photo'}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-black/30" />
 
                   {/* Phase Badge */}
                   <div className="absolute top-3 left-3">
-                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md border backdrop-blur-md ${getPhaseBadge(item.activity)}`}>
-                      {item.activity} Phase
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md border backdrop-blur-md ${getPhaseBadge(item?.activity)}`}>
+                      {item?.activity || 'General'} Phase
                     </span>
                   </div>
 
@@ -164,36 +168,36 @@ export default function EvidenceGallery() {
                   {/* Date badge */}
                   <div className="absolute bottom-2.5 left-3 text-[11px] text-slate-300 flex items-center space-x-1">
                     <Calendar className="w-3 h-3 text-emerald-400" />
-                    <span>{item.date}</span>
+                    <span>{item?.date || ''}</span>
                   </div>
                 </div>
 
                 {/* Card Content */}
                 <div className="p-4 space-y-2.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-mono text-emerald-400 font-bold">{item.projectId}</span>
+                    <span className="font-mono text-emerald-400 font-bold">{item?.projectId || ''}</span>
                     <span className="text-slate-400 text-[10px] flex items-center space-x-1">
                       <User className="w-3 h-3 text-slate-500" />
-                      <span>{item.uploadedBy?.split('(')[0] || 'Technical Officer'}</span>
+                      <span>{item?.uploadedBy?.split('(')[0] || 'Technical Officer'}</span>
                     </span>
                   </div>
 
                   <h4
-                    onClick={() => proj && openProjectDetail(proj)}
+                    onClick={() => proj && openProjectDetail?.(proj)}
                     className="text-xs font-bold text-white hover:text-emerald-300 cursor-pointer line-clamp-1"
                   >
-                    {proj?.name || 'Project Reference'}
+                    {proj?.name || proj?.title || 'Project Reference'}
                   </h4>
 
                   <p className="text-xs text-slate-300 line-clamp-2">
-                    {item.description}
+                    {item?.description || ''}
                   </p>
 
                   <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
-                    <span className="text-[10px] text-slate-500 font-mono">{item.id}</span>
+                    <span className="text-[10px] text-slate-500 font-mono">{itemId}</span>
                     {proj && (
                       <button
-                        onClick={() => openProjectDetail(proj)}
+                        onClick={() => openProjectDetail?.(proj)}
                         className="text-emerald-400 text-[11px] font-semibold flex items-center space-x-1 hover:underline"
                       >
                         <span>Project View</span>
@@ -227,28 +231,28 @@ export default function EvidenceGallery() {
 
             <div className="max-h-[70vh] bg-black flex items-center justify-center">
               <img
-                src={lightboxPhoto.imageUrl}
-                alt={lightboxPhoto.description}
+                src={lightboxPhoto?.imageUrl}
+                alt={lightboxPhoto?.description || 'Inspection photo'}
                 className="max-h-[70vh] w-auto object-contain"
               />
             </div>
 
             <div className="p-5 space-y-2 bg-slate-900">
               <div className="flex items-center space-x-3">
-                <span className={`text-xs font-bold px-2.5 py-1 rounded-md border ${getPhaseBadge(lightboxPhoto.activity)}`}>
-                  {lightboxPhoto.activity} Phase
+                <span className={`text-xs font-bold px-2.5 py-1 rounded-md border ${getPhaseBadge(lightboxPhoto?.activity)}`}>
+                  {lightboxPhoto?.activity || 'Site'} Phase
                 </span>
                 <span className="font-mono text-xs text-emerald-400 font-bold">
-                  {lightboxPhoto.projectId}
+                  {lightboxPhoto?.projectId || ''}
                 </span>
                 <span className="text-xs text-slate-400 flex items-center space-x-1">
                   <Calendar className="w-3.5 h-3.5" />
-                  <span>{lightboxPhoto.date}</span>
+                  <span>{lightboxPhoto?.date || ''}</span>
                 </span>
               </div>
-              <p className="text-sm text-slate-200">{lightboxPhoto.description}</p>
+              <p className="text-sm text-slate-200">{lightboxPhoto?.description || ''}</p>
               <p className="text-xs text-slate-400">
-                Uploaded by: <span className="text-slate-300 font-semibold">{lightboxPhoto.uploadedBy}</span>
+                Uploaded by: <span className="text-slate-300 font-semibold">{lightboxPhoto?.uploadedBy || 'Technical Officer'}</span>
               </p>
             </div>
           </div>

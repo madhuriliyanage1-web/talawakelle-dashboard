@@ -15,44 +15,45 @@ import {
 
 export default function DelaysTracker() {
   const {
-    filteredProjects,
-    getProjectAlerts,
-    openProjectDetail,
-    setSelectedProject,
-    setIsQuickUpdateOpen,
-    updateProject
-  } = useProject();
+    filteredProjects = [],
+    getProjectAlerts = () => [],
+    openProjectDetail = () => {},
+    setSelectedProject = () => {},
+    setIsQuickUpdateOpen = () => {},
+    updateProject = () => {}
+  } = useProject() || {};
 
   const [filterSeverity, setFilterSeverity] = useState('all');
   const [interventionNotice, setInterventionNotice] = useState(null);
 
   // Collect all filtered projects with delays/alerts
-  const flaggedProjects = filteredProjects
+  const flaggedProjects = (filteredProjects || [])
     .map(p => ({
       project: p,
-      alerts: getProjectAlerts(p)
+      alerts: getProjectAlerts?.(p) || []
     }))
-    .filter(item => item.alerts.length > 0);
+    .filter(item => (item?.alerts || []).length > 0);
 
   // Filter by severity if selected
-  const filteredFlagged = flaggedProjects.filter(({ alerts }) => {
+  const filteredFlagged = (flaggedProjects || []).filter(({ alerts }) => {
     if (filterSeverity === 'all') return true;
-    return alerts.some(a => a.severity === filterSeverity);
+    return (alerts || []).some(a => a?.severity === filterSeverity);
   });
 
   const handleIntervention = (project, actionType) => {
+    if (!project?.id) return;
     if (actionType === 'expedite') {
-      updateProject(project.id, {
+      updateProject?.(project.id, {
         remarks: `${project.remarks || ''} [Intervention: Expedite instruction issued by Divisional Secretary on ${new Date().toISOString().split('T')[0]}]`
       });
       setInterventionNotice(`Notice sent to technical officer and contractor for ${project.id}.`);
     } else if (actionType === 'escalate') {
-      updateProject(project.id, {
+      updateProject?.(project.id, {
         issues: {
-          ...project.issues,
+          ...(project?.issues || {}),
           hasIssue: true,
           escalationLevel: 'Urgent',
-          description: `Escalated to District Secretariat Planning Director: ${project.issues?.description || 'Delay remediation required.'}`
+          description: `Escalated to District Secretariat Planning Director: ${project?.issues?.description || 'Delay remediation required.'}`
         }
       });
       setInterventionNotice(`Project ${project.id} formally escalated to District Secretariat.`);
@@ -105,7 +106,7 @@ export default function DelaysTracker() {
       )}
 
       {/* Flagged Projects Cards */}
-      {filteredFlagged.length === 0 ? (
+      {(filteredFlagged || []).length === 0 ? (
         <div className="glass-panel p-12 text-center rounded-2xl border border-slate-800 space-y-2">
           <CheckCircle className="w-10 h-10 text-emerald-400 mx-auto" />
           <h3 className="text-base font-bold text-white">No Flagged Bottlenecks in this View</h3>
@@ -115,117 +116,128 @@ export default function DelaysTracker() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredFlagged.map(({ project, alerts }) => (
-            <div
-              key={project.id}
-              className="glass-panel p-5 rounded-2xl border border-slate-800 hover:border-rose-500/40 transition-all flex flex-col justify-between space-y-4"
-            >
-              {/* Header: ID, GND, Severity Pill */}
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="flex items-center space-x-2 text-xs">
-                    <span className="font-mono font-bold text-slate-300 bg-slate-800 px-2 py-0.5 rounded">
-                      {project.id}
-                    </span>
-                    <span className="text-slate-400">
-                      {project.gndCode} - {project.gndName}
-                    </span>
-                  </div>
-                  <h3 className="text-sm font-bold text-white mt-1.5 hover:text-emerald-300 cursor-pointer"
-                    onClick={() => openProjectDetail(project)}>
-                    {project.name}
-                  </h3>
-                </div>
+          {(filteredFlagged || []).map(({ project, alerts }) => {
+            const pId = project?.id || 'PROJ';
+            const pName = project?.name || project?.title || 'Project';
+            const pGnd = `${project?.gndCode || ''}${project?.gndCode && project?.gndName ? ' - ' : ''}${project?.gndName || project?.gnd || ''}`;
+            const pPhys = Number(project?.physicalProgress ?? project?.progress ?? 0);
+            const pFin = Number(project?.financialProgress ?? 0);
+            const pOfficer = project?.ceoOfficer || project?.responsibleOfficer || 'Unassigned';
 
-                <div className="flex flex-col items-end space-y-1">
-                  <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                    {alerts[0]?.severity || 'Review'}
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    Target: {project.expectedCompletionDate}
-                  </span>
-                </div>
-              </div>
-
-              {/* Alert Badges & Reasons */}
-              <div className="space-y-2 bg-slate-900/70 p-3 rounded-xl border border-slate-800">
-                {alerts.map((alt, idx) => (
-                  <div key={idx} className="flex items-start space-x-2">
-                    <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-xs font-bold text-rose-300">{alt.label}</p>
-                      <p className="text-[11px] text-slate-400">{alt.description}</p>
+            return (
+              <div
+                key={pId}
+                className="glass-panel p-5 rounded-2xl border border-slate-800 hover:border-rose-500/40 transition-all flex flex-col justify-between space-y-4"
+              >
+                {/* Header: ID, GND, Severity Pill */}
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="flex items-center space-x-2 text-xs">
+                      <span className="font-mono font-bold text-slate-300 bg-slate-800 px-2 py-0.5 rounded">
+                        {pId}
+                      </span>
+                      <span className="text-slate-400">
+                        {pGnd}
+                      </span>
                     </div>
+                    <h3
+                      className="text-sm font-bold text-white mt-1.5 hover:text-emerald-300 cursor-pointer"
+                      onClick={() => openProjectDetail?.(project)}
+                    >
+                      {pName}
+                    </h3>
                   </div>
-                ))}
 
-                {project.issues?.description && (
-                  <div className="pt-2 border-t border-slate-800 text-[11px] text-amber-300/90 flex items-start space-x-2">
-                    <span className="font-semibold text-amber-400">Officer Remarks:</span>
-                    <span>{project.issues.description}</span>
+                  <div className="flex flex-col items-end space-y-1">
+                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                      {alerts?.[0]?.severity || 'Review'}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      Target: {project?.expectedCompletionDate || project?.year || '2026'}
+                    </span>
                   </div>
-                )}
-              </div>
+                </div>
 
-              {/* Progress & Officer */}
-              <div className="grid grid-cols-3 gap-2 text-xs pt-1 border-t border-slate-800">
-                <div>
-                  <span className="text-[10px] text-slate-500 uppercase block">Physical</span>
-                  <span className="font-bold text-emerald-400">{project.physicalProgress}%</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-500 uppercase block">Financial</span>
-                  <span className="font-bold text-amber-400">{project.financialProgress}%</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-500 uppercase block" title="Community Empowerment Officer (CEO)">CEO</span>
-                  <span className="font-semibold text-teal-300 truncate block" title={project.ceoOfficer || project.responsibleOfficer}>
-                    {project.ceoOfficer || project.responsibleOfficer || 'Unassigned'}
-                  </span>
-                </div>
-              </div>
+                {/* Alert Badges & Reasons */}
+                <div className="space-y-2 bg-slate-900/70 p-3 rounded-xl border border-slate-800">
+                  {(alerts || []).map((alt, idx) => (
+                    <div key={idx} className="flex items-start space-x-2">
+                      <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-bold text-rose-300">{alt?.label}</p>
+                        <p className="text-[11px] text-slate-400">{alt?.description}</p>
+                      </div>
+                    </div>
+                  ))}
 
-              {/* Quick Management Intervention Buttons */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
-                <div className="flex items-center space-x-1.5">
+                  {project?.issues?.description && (
+                    <div className="pt-2 border-t border-slate-800 text-[11px] text-amber-300/90 flex items-start space-x-2">
+                      <span className="font-semibold text-amber-400">Officer Remarks:</span>
+                      <span>{project.issues.description}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Progress & Officer */}
+                <div className="grid grid-cols-3 gap-2 text-xs pt-1 border-t border-slate-800">
+                  <div>
+                    <span className="text-[10px] text-slate-500 uppercase block">Physical</span>
+                    <span className="font-bold text-emerald-400">{pPhys}%</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 uppercase block">Financial</span>
+                    <span className="font-bold text-amber-400">{pFin}%</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 uppercase block" title="Community Empowerment Officer (CEO)">CEO</span>
+                    <span className="font-semibold text-teal-300 truncate block" title={pOfficer}>
+                      {pOfficer}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Quick Management Intervention Buttons */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+                  <div className="flex items-center space-x-1.5">
+                    <button
+                      onClick={() => handleIntervention(project, 'expedite')}
+                      className="flex items-center space-x-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 transition"
+                    >
+                      <Send className="w-3 h-3" />
+                      <span>Issue Notice</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleIntervention(project, 'escalate')}
+                      className="flex items-center space-x-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 transition"
+                    >
+                      <AlertOctagon className="w-3 h-3" />
+                      <span>Escalate to DS</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setSelectedProject?.(project);
+                        setIsQuickUpdateOpen?.(true);
+                      }}
+                      className="flex items-center space-x-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+                    >
+                      <Sliders className="w-3 h-3 text-emerald-400" />
+                      <span>Update %</span>
+                    </button>
+                  </div>
+
                   <button
-                    onClick={() => handleIntervention(project, 'expedite')}
-                    className="flex items-center space-x-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 transition"
+                    onClick={() => openProjectDetail?.(project)}
+                    className="flex items-center space-x-1 text-xs font-bold text-emerald-400 hover:text-emerald-300"
                   >
-                    <Send className="w-3 h-3" />
-                    <span>Issue Notice</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleIntervention(project, 'escalate')}
-                    className="flex items-center space-x-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 transition"
-                  >
-                    <AlertOctagon className="w-3 h-3" />
-                    <span>Escalate to DS</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setSelectedProject(project);
-                      setIsQuickUpdateOpen(true);
-                    }}
-                    className="flex items-center space-x-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
-                  >
-                    <Sliders className="w-3 h-3 text-emerald-400" />
-                    <span>Update %</span>
+                    <span>Profile</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
-
-                <button
-                  onClick={() => openProjectDetail(project)}
-                  className="flex items-center space-x-1 text-xs font-bold text-emerald-400 hover:text-emerald-300"
-                >
-                  <span>Profile</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

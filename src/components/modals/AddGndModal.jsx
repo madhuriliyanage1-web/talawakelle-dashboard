@@ -4,11 +4,11 @@ import { X, MapPin, Plus, UserCheck, Phone, FileText } from 'lucide-react';
 
 export default function AddGndModal() {
   const {
-    isAddGndOpen,
-    setIsAddGndOpen,
-    addGnd,
-    ceoOfficers
-  } = useProject();
+    isAddGndOpen = false,
+    setIsAddGndOpen = () => {},
+    addGnd = () => {},
+    ceoOfficers = []
+  } = useProject() || {};
 
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
@@ -22,19 +22,19 @@ export default function AddGndModal() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!name.trim()) {
+    if (!name?.trim()) {
       alert('Please enter a GND Division name.');
       return;
     }
 
-    const finalCeo = isCustomOfficer ? customOfficer.trim() : ceoOfficer.trim();
+    const finalCeo = isCustomOfficer ? (customOfficer?.trim() || '') : (ceoOfficer?.trim() || '');
 
-    addGnd({
+    addGnd?.({
       name: name.trim(),
-      code: code.trim(),
-      displayName: displayName.trim() || name.trim(),
+      code: code?.trim() || '',
+      displayName: displayName?.trim() || name.trim(),
       ceoOfficer: finalCeo,
-      phone: phone.trim() || '+94 52 225 8234'
+      phone: phone?.trim() || '+94 52 225 8234'
     });
 
     // Reset form
@@ -45,16 +45,16 @@ export default function AddGndModal() {
     setCustomOfficer('');
     setIsCustomOfficer(false);
     setPhone('+94 52 225 8234');
-    setIsAddGndOpen(false);
+    setIsAddGndOpen?.(false);
   };
 
   return (
     <div
-      onClick={() => setIsAddGndOpen(false)}
+      onClick={() => setIsAddGndOpen?.(false)}
       className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn"
     >
       <div
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => e?.stopPropagation?.()}
         className="relative max-w-lg w-full bg-slate-900 border border-slate-700 rounded-3xl overflow-hidden shadow-2xl p-6 text-slate-100 space-y-4"
       >
         {/* Header */}
@@ -69,7 +69,7 @@ export default function AddGndModal() {
             </div>
           </div>
           <button
-            onClick={() => setIsAddGndOpen(false)}
+            onClick={() => setIsAddGndOpen?.(false)}
             className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
           >
             <X className="w-4 h-4" />
@@ -154,7 +154,7 @@ export default function AddGndModal() {
                 className="w-full p-2 rounded-xl bg-slate-800 border border-slate-700 text-white focus:ring-1 focus:ring-emerald-500"
               >
                 <option value="">-- Select Community Empowerment Officer --</option>
-                {ceoOfficers.map((ceo) => (
+                {(ceoOfficers || []).map((ceo) => (
                   <option key={ceo} value={ceo}>
                     {ceo}
                   </option>
@@ -182,7 +182,7 @@ export default function AddGndModal() {
           <div className="pt-3 border-t border-slate-800 flex items-center justify-end space-x-2">
             <button
               type="button"
-              onClick={() => setIsAddGndOpen(false)}
+              onClick={() => setIsAddGndOpen?.(false)}
               className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold transition"
             >
               Cancel

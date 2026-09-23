@@ -20,16 +20,16 @@ import {
 
 export default function MasterTable() {
   const {
-    filteredProjects,
-    openProjectDetail,
-    setSelectedProject,
-    setIsEditProjectOpen,
-    setIsQuickUpdateOpen,
-    setIsAddProjectOpen,
-    setIsAddCategoryOpen,
-    deleteProject,
-    getProjectAlerts
-  } = useProject();
+    filteredProjects = [],
+    openProjectDetail = () => {},
+    setSelectedProject = () => {},
+    setIsEditProjectOpen = () => {},
+    setIsQuickUpdateOpen = () => {},
+    setIsAddProjectOpen = () => {},
+    setIsAddCategoryOpen = () => {},
+    deleteProject = () => {},
+    getProjectAlerts = () => []
+  } = useProject() || {};
 
   const [sortField, setSortField] = useState('id');
   const [sortDirection, setSortDirection] = useState('asc');
@@ -49,22 +49,22 @@ export default function MasterTable() {
 
   // Inline table filter & sorting
   const processedProjects = useMemo(() => {
-    let list = [...filteredProjects];
+    let list = [...(filteredProjects || [])];
 
     if (tableSearch) {
-      const q = tableSearch.toLowerCase();
+      const q = String(tableSearch).toLowerCase();
       list = list.filter(p =>
-        p.name.toLowerCase().includes(q) ||
-        p.id.toLowerCase().includes(q) ||
-        (p.gndName || '').toLowerCase().includes(q) ||
-        (p.category || '').toLowerCase().includes(q) ||
-        (p.ceoOfficer || p.responsibleOfficer || '').toLowerCase().includes(q)
+        (p?.name || p?.title || '').toLowerCase().includes(q) ||
+        (p?.id || '').toLowerCase().includes(q) ||
+        (p?.gndName || p?.gnd || '').toLowerCase().includes(q) ||
+        (p?.category || '').toLowerCase().includes(q) ||
+        (p?.ceoOfficer || p?.responsibleOfficer || '').toLowerCase().includes(q)
       );
     }
 
     list.sort((a, b) => {
-      let aVal = a[sortField];
-      let bVal = b[sortField];
+      let aVal = a?.[sortField];
+      let bVal = b?.[sortField];
 
       if (typeof aVal === 'string') aVal = aVal.toLowerCase();
       if (typeof bVal === 'string') bVal = bVal.toLowerCase();
@@ -78,8 +78,8 @@ export default function MasterTable() {
   }, [filteredProjects, tableSearch, sortField, sortDirection]);
 
   // Pagination
-  const totalPages = Math.ceil(processedProjects.length / pageSize) || 1;
-  const paginatedProjects = processedProjects.slice(
+  const totalPages = Math.ceil((processedProjects || []).length / pageSize) || 1;
+  const paginatedProjects = (processedProjects || []).slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   );
@@ -93,20 +93,20 @@ export default function MasterTable() {
       'Target Completion Date', 'Remarks'
     ];
 
-    const rows = processedProjects.map(p => [
-      p.id,
-      p.gndCode || '',
-      `"${p.gndName.replace(/"/g, '""')}"`,
-      `"${p.name.replace(/"/g, '""')}"`,
-      `"${p.category}"`,
-      p.allocation,
-      p.expenditure,
-      p.physicalProgress,
-      p.financialProgress,
-      p.status,
-      `"${p.ceoOfficer || p.responsibleOfficer || ''}"`,
-      p.expectedCompletionDate,
-      `"${(p.remarks || '').replace(/"/g, '""')}"`
+    const rows = (processedProjects || []).map(p => [
+      p?.id || '',
+      p?.gndCode || '',
+      `"${String(p?.gndName || p?.gnd || '').replace(/"/g, '""')}"`,
+      `"${String(p?.name || p?.title || '').replace(/"/g, '""')}"`,
+      `"${String(p?.category || '').replace(/"/g, '""')}"`,
+      p?.allocation || 0,
+      p?.expenditure || 0,
+      p?.physicalProgress ?? p?.progress ?? 0,
+      p?.financialProgress ?? 0,
+      p?.status || p?.stage || '',
+      `"${String(p?.ceoOfficer || p?.responsibleOfficer || '').replace(/"/g, '""')}"`,
+      p?.expectedCompletionDate || '',
+      `"${String(p?.remarks || '').replace(/"/g, '""')}"`
     ]);
 
     const csvContent = 'data:text/csv;charset=utf-8,' +
@@ -122,21 +122,21 @@ export default function MasterTable() {
   };
 
   const handleEdit = (p, e) => {
-    e.stopPropagation();
-    setSelectedProject(p);
-    setIsEditProjectOpen(true);
+    e?.stopPropagation?.();
+    setSelectedProject?.(p);
+    setIsEditProjectOpen?.(true);
   };
 
   const handleQuickUpdate = (p, e) => {
-    e.stopPropagation();
-    setSelectedProject(p);
-    setIsQuickUpdateOpen(true);
+    e?.stopPropagation?.();
+    setSelectedProject?.(p);
+    setIsQuickUpdateOpen?.(true);
   };
 
   const handleDelete = (id, e) => {
-    e.stopPropagation();
+    e?.stopPropagation?.();
     if (window.confirm(`Are you sure you want to delete project ${id}?`)) {
-      deleteProject(id);
+      deleteProject?.(id);
     }
   };
 
@@ -158,14 +158,14 @@ export default function MasterTable() {
           </div>
 
           <span className="text-xs text-slate-400">
-            Total records: <span className="font-bold text-white">{processedProjects.length}</span>
+            Total records: <span className="font-bold text-white">{(processedProjects || []).length}</span>
           </span>
         </div>
 
         {/* Action Buttons: Add Project, New Category, Export */}
         <div className="flex items-center space-x-2">
           <button
-            onClick={() => setIsAddProjectOpen(true)}
+            onClick={() => setIsAddProjectOpen?.(true)}
             className="flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -173,7 +173,7 @@ export default function MasterTable() {
           </button>
 
           <button
-            onClick={() => setIsAddCategoryOpen(true)}
+            onClick={() => setIsAddCategoryOpen?.(true)}
             className="flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
           >
             <Tag className="w-3.5 h-3.5 text-indigo-400" />
@@ -282,7 +282,7 @@ export default function MasterTable() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
-              {paginatedProjects.length === 0 ? (
+              {(paginatedProjects || []).length === 0 ? (
                 <tr>
                   <td colSpan={10} className="py-8 text-center text-slate-400">
                     No matching projects found.
@@ -290,27 +290,35 @@ export default function MasterTable() {
                 </tr>
               ) : (
                 paginatedProjects.map((p) => {
-                  const alerts = getProjectAlerts(p);
+                  const alerts = getProjectAlerts?.(p) || [];
+                  const pId = p?.id || 'PROJ';
+                  const pName = p?.name || p?.title || 'Project';
+                  const pAlloc = parseFloat(p?.allocation) || 0;
+                  const pPhys = Number(p?.physicalProgress ?? p?.progress ?? 0);
+                  const pFin = Number(p?.financialProgress ?? 0);
+                  const pGnd = p?.gndCode || p?.gndName || p?.gnd || '';
+                  const pOfficer = p?.ceoOfficer || p?.responsibleOfficer || 'Unassigned';
+
                   return (
                     <tr
-                      key={p.id}
-                      onClick={() => openProjectDetail(p)}
+                      key={pId}
+                      onClick={() => openProjectDetail?.(p)}
                       className="hover:bg-slate-800/40 cursor-pointer transition-colors"
                     >
                       {/* ID */}
                       <td className="py-3 px-3.5 font-mono text-[11px] text-slate-300 font-bold">
-                        {p.id}
+                        {pId}
                       </td>
 
                       {/* Title */}
                       <td className="py-3 px-3.5">
-                        <div className="font-bold text-white line-clamp-1">{p.name}</div>
-                        <div className="text-[11px] text-slate-400 line-clamp-1">{p.description}</div>
-                        {alerts.length > 0 && (
+                        <div className="font-bold text-white line-clamp-1">{pName}</div>
+                        <div className="text-[11px] text-slate-400 line-clamp-1">{p?.description || ''}</div>
+                        {(alerts || []).length > 0 && (
                           <div className="mt-1 flex items-center space-x-1">
                             <AlertTriangle className="w-3 h-3 text-rose-400" />
                             <span className="text-[10px] text-rose-400 font-semibold">
-                              {alerts[0].label}
+                              {alerts?.[0]?.label}
                             </span>
                           </div>
                         )}
@@ -318,32 +326,32 @@ export default function MasterTable() {
 
                       {/* GND & Assigned CEO */}
                       <td className="py-3 px-3.5 whitespace-nowrap">
-                        <span className="font-medium text-slate-200 block">{p.gndCode || p.gndName}</span>
+                        <span className="font-medium text-slate-200 block">{pGnd}</span>
                         <span className="text-[11px] text-teal-400 block font-normal mt-0.5">
-                          CEO: {p.ceoOfficer || p.responsibleOfficer || 'Unassigned'}
+                          CEO: {pOfficer}
                         </span>
                       </td>
 
                       {/* Category */}
                       <td className="py-3 px-3.5 whitespace-nowrap">
                         <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700 text-[11px]">
-                          {p.category}
+                          {p?.category || 'General'}
                         </span>
                       </td>
 
                       {/* Allocation */}
                       <td className="py-3 px-3.5 text-right font-mono font-bold text-slate-200">
-                        Rs. {(p.allocation / 1000000).toFixed(2)} M
+                        Rs. {(pAlloc / 1000000).toFixed(2)} M
                       </td>
 
                       {/* Physical Progress */}
                       <td className="py-3 px-3.5 text-center">
                         <div className="inline-flex items-center space-x-1.5">
-                          <span className="font-bold text-emerald-400">{p.physicalProgress}%</span>
+                          <span className="font-bold text-emerald-400">{pPhys}%</span>
                           <div className="w-12 bg-slate-800 rounded-full h-1.5 overflow-hidden">
                             <div
                               className="bg-emerald-500 h-full rounded-full"
-                              style={{ width: `${p.physicalProgress}%` }}
+                              style={{ width: `${Math.min(Math.max(pPhys, 0), 100)}%` }}
                             />
                           </div>
                         </div>
@@ -352,11 +360,11 @@ export default function MasterTable() {
                       {/* Financial Progress */}
                       <td className="py-3 px-3.5 text-center">
                         <div className="inline-flex items-center space-x-1.5">
-                          <span className="font-bold text-amber-400">{p.financialProgress}%</span>
+                          <span className="font-bold text-amber-400">{pFin}%</span>
                           <div className="w-12 bg-slate-800 rounded-full h-1.5 overflow-hidden">
                             <div
                               className="bg-amber-500 h-full rounded-full"
-                              style={{ width: `${p.financialProgress}%` }}
+                              style={{ width: `${Math.min(Math.max(pFin, 0), 100)}%` }}
                             />
                           </div>
                         </div>
@@ -365,20 +373,20 @@ export default function MasterTable() {
                       {/* Status */}
                       <td className="py-3 px-3.5 whitespace-nowrap">
                         <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-500/15 text-blue-300 border border-blue-500/30">
-                          {p.status}
+                          {p?.status || p?.stage || 'Planning'}
                         </span>
                       </td>
 
                       {/* Target Date */}
                       <td className="py-3 px-3.5 text-slate-300 whitespace-nowrap font-mono text-[11px]">
-                        {p.expectedCompletionDate}
+                        {p?.expectedCompletionDate || p?.year || '2026'}
                       </td>
 
                       {/* Actions */}
                       <td className="py-3 px-3.5 text-right whitespace-nowrap">
                         <div className="inline-flex items-center space-x-1">
                           <button
-                            onClick={(e) => { e.stopPropagation(); openProjectDetail(p); }}
+                            onClick={(e) => { e?.stopPropagation?.(); openProjectDetail?.(p); }}
                             className="p-1 rounded hover:bg-slate-700 text-slate-300 hover:text-white"
                             title="Inspect Project Profile"
                           >
@@ -399,7 +407,7 @@ export default function MasterTable() {
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={(e) => handleDelete(p.id, e)}
+                            onClick={(e) => handleDelete(pId, e)}
                             className="p-1 rounded hover:bg-rose-900/40 text-rose-400 hover:text-rose-300"
                             title="Delete"
                           >

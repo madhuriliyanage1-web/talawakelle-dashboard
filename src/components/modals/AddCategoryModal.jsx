@@ -4,10 +4,10 @@ import { X, Tag, Plus } from 'lucide-react';
 
 export default function AddCategoryModal() {
   const {
-    isAddCategoryOpen,
-    setIsAddCategoryOpen,
-    addCategory
-  } = useProject();
+    isAddCategoryOpen = false,
+    setIsAddCategoryOpen = () => {},
+    addCategory = () => {}
+  } = useProject() || {};
 
   const [categoryName, setCategoryName] = useState('');
   const [selectedColor, setSelectedColor] = useState('#10b981');
@@ -29,22 +29,22 @@ export default function AddCategoryModal() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!categoryName.trim()) {
+    if (!categoryName?.trim()) {
       alert('Please enter a category name.');
       return;
     }
-    addCategory({ name: categoryName.trim(), color: selectedColor });
+    addCategory?.({ name: categoryName.trim(), color: selectedColor });
     setCategoryName('');
-    setIsAddCategoryOpen(false);
+    setIsAddCategoryOpen?.(false);
   };
 
   return (
     <div
-      onClick={() => setIsAddCategoryOpen(false)}
+      onClick={() => setIsAddCategoryOpen?.(false)}
       className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
     >
       <div
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => e?.stopPropagation?.()}
         className="relative max-w-md w-full bg-slate-900 border border-slate-700 rounded-3xl overflow-hidden shadow-2xl p-6 text-slate-100 space-y-4"
       >
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -53,7 +53,7 @@ export default function AddCategoryModal() {
             <h3 className="text-base font-bold text-white">Add New Programme Category</h3>
           </div>
           <button
-            onClick={() => setIsAddCategoryOpen(false)}
+            onClick={() => setIsAddCategoryOpen?.(false)}
             className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400"
           >
             <X className="w-4 h-4" />
@@ -97,7 +97,7 @@ export default function AddCategoryModal() {
           <div className="pt-3 border-t border-slate-800 flex items-center justify-end space-x-2">
             <button
               type="button"
-              onClick={() => setIsAddCategoryOpen(false)}
+              onClick={() => setIsAddCategoryOpen?.(false)}
               className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-semibold"
             >
               Cancel

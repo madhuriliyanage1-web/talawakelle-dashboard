@@ -20,17 +20,17 @@ import {
 
 export default function Navbar({ activeTab, setActiveTab }) {
   const {
-    isDemoData,
-    resetToDemoData,
-    exportDataJSON,
-    setIsAddProjectOpen,
-    setIsAddCategoryOpen,
-    setIsAddGndOpen,
-    setIsAddCeoOpen,
-    setIsSettingsOpen,
-    executiveMetrics,
-    SECRETARIAT_META
-  } = useProject();
+    isDemoData = false,
+    resetToDemoData = () => {},
+    exportDataJSON = () => {},
+    setIsAddProjectOpen = () => {},
+    setIsAddCategoryOpen = () => {},
+    setIsAddGndOpen = () => {},
+    setIsAddCeoOpen = () => {},
+    setIsSettingsOpen = () => {},
+    executiveMetrics = {},
+    SECRETARIAT_META = {}
+  } = useProject() || {};
 
   const [currentTime, setCurrentTime] = useState('');
   const [showDemoMenu, setShowDemoMenu] = useState(false);
@@ -54,6 +54,8 @@ export default function Navbar({ activeTab, setActiveTab }) {
     return () => clearInterval(timer);
   }, []);
 
+  const delayedCount = Number(executiveMetrics?.delayed || 0);
+
   const navItems = [
     { id: 'overall', label: 'Overall Dashboard', icon: LayoutDashboard },
     { id: 'gnd', label: 'GND-wise Explorer', icon: MapPin },
@@ -62,7 +64,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
       id: 'delays',
       label: 'Issues & Delays Tracker',
       icon: AlertTriangle,
-      badge: executiveMetrics.delayed > 0 ? executiveMetrics.delayed : null
+      badge: delayedCount > 0 ? delayedCount : null
     },
     { id: 'evidence', label: 'Photo Evidence Gallery', icon: Camera },
     { id: 'reports', label: 'Secretariat Reports', icon: FileText }
@@ -86,7 +88,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
                   Government of Sri Lanka
                 </span>
                 <span className="text-xs text-slate-300 hidden md:inline">
-                  {SECRETARIAT_META.district} • {SECRETARIAT_META.province}
+                  {SECRETARIAT_META?.district || 'Nuwara Eliya'} • {SECRETARIAT_META?.province || 'Central Province'}
                 </span>
               </div>
               <h1 className="text-lg sm:text-xl font-black tracking-tight text-white mt-0.5">
@@ -134,14 +136,14 @@ export default function Navbar({ activeTab, setActiveTab }) {
                     <p className="text-[10px]">Talawakelle DS Project Register</p>
                   </div>
                   <button
-                    onClick={resetToDemoData}
+                    onClick={() => resetToDemoData?.()}
                     className="w-full text-left px-3 py-2 hover:bg-slate-800 flex items-center space-x-2"
                   >
                     <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
                     <span>Reset to Default Demo Data</span>
                   </button>
                   <button
-                    onClick={exportDataJSON}
+                    onClick={() => exportDataJSON?.()}
                     className="w-full text-left px-3 py-2 hover:bg-slate-800 flex items-center space-x-2"
                   >
                     <Download className="w-3.5 h-3.5 text-emerald-400" />
@@ -153,7 +155,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
 
             {/* Top Action Buttons: Settings, + GND, + CEO, + Category & Add Project */}
             <button
-              onClick={() => setIsSettingsOpen(true)}
+              onClick={() => setIsSettingsOpen?.(true)}
               className="hidden md:flex items-center space-x-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 transition"
               title="Settings & Master Configuration"
             >
@@ -162,7 +164,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
             </button>
 
             <button
-              onClick={() => setIsAddGndOpen(true)}
+              onClick={() => setIsAddGndOpen?.(true)}
               className="hidden sm:flex items-center space-x-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 transition"
               title="Add New Grama Niladhari Division"
             >
@@ -171,7 +173,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
             </button>
 
             <button
-              onClick={() => setIsAddCeoOpen(true)}
+              onClick={() => setIsAddCeoOpen?.(true)}
               className="hidden sm:flex items-center space-x-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 transition"
               title="Add Community Empowerment Officer"
             >
@@ -180,7 +182,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
             </button>
 
             <button
-              onClick={() => setIsAddCategoryOpen(true)}
+              onClick={() => setIsAddCategoryOpen?.(true)}
               className="hidden sm:flex items-center space-x-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 transition"
               title="Add New Programme Category"
             >
@@ -189,7 +191,7 @@ export default function Navbar({ activeTab, setActiveTab }) {
             </button>
 
             <button
-              onClick={() => setIsAddProjectOpen(true)}
+              onClick={() => setIsAddProjectOpen?.(true)}
               className="flex items-center space-x-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md transition"
             >
               <Plus className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />

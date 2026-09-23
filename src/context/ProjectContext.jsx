@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+// ─────────────────────────────────────────────────────────────────────────────
+// ProjectContext.jsx — Talawakelle Divisional Secretariat
+// Real-time Firestore sync (replaces localStorage + Google Sheets CSV)
+// ─────────────────────────────────────────────────────────────────────────────
+import React, {
+  createContext, useContext, useState, useEffect, useMemo, useRef, useCallback
+} from 'react';
 import {
   INITIAL_PROJECTS,
   INITIAL_GNDS,
@@ -9,149 +15,241 @@ import {
   COMMUNITY_EMPOWERMENT_OFFICERS
 } from '../data/mockData';
 import { normalizeGndString, isGndMatch } from '../utils/gndMatcher';
+import { db } from '../firebase';
+import {
+  collection,
+  doc,
+  onSnapshot,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  getDocs,
+  writeBatch
+} from 'firebase/firestore';
 
-const ProjectContext = createContext();
+// ─── Internal Context Object ──────────────────────────────────────────────────
+const ProjectContext = createContext(null);
 
-const STORAGE_KEYS = {
-  PROJECTS: 'tlw_ds_projects_v4',
-  CATEGORIES: 'tlw_ds_categories_v4',
-  EVIDENCE: 'tlw_ds_evidence_v4',
-  GNDS: 'tlw_ds_gnds_v4',
-  YEARS: 'tlw_ds_financial_years_v4',
-  CEOS: 'tlw_ds_custom_ceos_v4',
-  CEO_DIRECTORY: 'tlw_ds_ceo_dir_v4',
-  CUSTOM_FLAG: 'tlw_ds_has_custom_data_v4'
+// ─── Project Record Normalizer ────────────────────────────────────────────────
+const normalizeProjectRecord = (p, index = 0, gndsList = (INITIAL_GNDS || [])) => {
+  const gndName = p?.gndName || p?.gnd || '';
+  const matchedGnd = (gndsList || []).find(g =>
+    isGndMatch({ ...p, gndName, gnd: gndName }, g, gndsList || [])
+  );
+  const ceo =
+    (matchedGnd ? matchedGnd.ceoOfficer : null) ||
+    p?.ceoOfficer ||
+    (p?.responsibleOfficer && !p?.responsibleOfficer?.includes('(')
+      ? p.responsibleOfficer
+      : (matchedGnd?.ceoOfficer || 'Unassigned'));
+  const title = p?.title || p?.name || 'Untitled Project';
+  const progressVal = Number(p?.physicalProgress ?? p?.progress ?? 0) || 0;
+  const stageVal = p?.status || p?.stage || 'Project Identification';
+  const allocVal = parseFloat(p?.allocation) || 0;
+  const expVal = parseFloat(p?.expenditure) || 0;
+  const finProgressVal =
+    Number(p?.financialProgress ?? (allocVal > 0 ? Math.round((expVal / allocVal) * 100) : 0)) || 0;
+  const yearVal = String(p?.financialYear || p?.year || '2026');
+
+  return {
+    ...p,
+    id: p?.id || `PROJ-${String(index + 1).padStart(2, '0')}`,
+    title,
+    name: title,
+    description:
+      p?.description || `${title} in ${matchedGnd ? matchedGnd.name : (gndName || 'Talawakelle')}`,
+    gndId: matchedGnd ? matchedGnd.id : (p?.gndId || `GND-${String(index + 1).padStart(2, '0')}`),
+    gndName: matchedGnd ? matchedGnd.name : gndName,
+    gndCode: matchedGnd ? matchedGnd.code : (p?.gndCode || ''),
+    gnd: gndName,
+    category: p?.category || 'Rural Road Development',
+    allocation: allocVal,
+    expenditure: expVal,
+    physicalProgress: progressVal,
+    progress: progressVal,
+    financialProgress: finProgressVal,
+    status: stageVal,
+    stage: stageVal,
+    ceoOfficer: ceo,
+    responsibleOfficer: ceo,
+    financialYear: yearVal,
+    year: yearVal,
+    expectedCompletionDate: p?.expectedCompletionDate || '2026-12-31',
+    approvalDate: p?.approvalDate || '2026-01-15',
+    provisionDate: p?.provisionDate || '2026-02-01',
+    evidence: p?.evidence || [],
+    remarks: p?.remarks || '',
+    issues: p?.issues || { hasIssue: false, description: '', escalationLevel: 'Normal' },
+    lastUpdated: p?.lastUpdated || new Date().toISOString().split('T')[0]
+  };
 };
 
+// ─── Helper: Delete all docs in a Firestore collection ───────────────────────
+const clearCollection = async (colName) => {
+  const snap = await getDocs(collection(db, colName));
+  if (snap.empty) return;
+  const batch = writeBatch(db);
+  snap.docs.forEach(d => batch.delete(d.ref));
+  await batch.commit();
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ProjectProvider
+// ─────────────────────────────────────────────────────────────────────────────
 export function ProjectProvider({ children }) {
-  // 1. Core States backed by localStorage
-  const [projects, setProjects] = useState(() => {
+  // ── Core state (sourced from Firestore) ──────────────────────────────────
+  const [projects, setProjects] = useState([]);
+  const [gnds, setGnds] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [evidence, setEvidence] = useState([]);
+  const [financialYears, setFinancialYears] = useState([2026, 2025, 2024]);
+  const [customCeos, setCustomCeos] = useState([]);
+  const [ceoDirectory, setCeoDirectory] = useState({});
+  const [isDemoData, setIsDemoData] = useState(true);
+
+  // ── UI state ─────────────────────────────────────────────────────────────
+  const [loading, setLoading] = useState(true);
+  const [dbError, setDbError] = useState(null);
+
+  // ── Refs to avoid stale closures in Firestore async callbacks ────────────
+  const gndsRef = useRef([]);
+  const projectsRef = useRef([]);
+  const categoriesRef = useRef([]);
+  const customCeosRef = useRef([]);
+  const ceoDirectoryRef = useRef({});
+  const financialYearsRef = useRef([2026, 2025, 2024]);
+
+  useEffect(() => { gndsRef.current = gnds; }, [gnds]);
+  useEffect(() => { projectsRef.current = projects; }, [projects]);
+  useEffect(() => { categoriesRef.current = categories; }, [categories]);
+  useEffect(() => { customCeosRef.current = customCeos; }, [customCeos]);
+  useEffect(() => { ceoDirectoryRef.current = ceoDirectory; }, [ceoDirectory]);
+  useEffect(() => { financialYearsRef.current = financialYears; }, [financialYears]);
+
+  // ── Seed initial data to Firestore (first-run only) ──────────────────────
+  const seedInitialData = useCallback(async () => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEYS.PROJECTS);
-      const list = saved ? JSON.parse(saved) : INITIAL_PROJECTS;
-      // Normalize projects to ensure actual Community Empowerment Officer (CEO) and GND are populated
-      return list.map(p => {
-        const matchedGnd = INITIAL_GNDS.find(g => isGndMatch(p, g, INITIAL_GNDS));
-        const ceo = (matchedGnd ? matchedGnd.ceoOfficer : null) || p.ceoOfficer || (p.responsibleOfficer && !p.responsibleOfficer.includes('(') ? p.responsibleOfficer : (matchedGnd?.ceoOfficer || 'Unassigned'));
-        return {
-          ...p,
-          gndId: matchedGnd ? matchedGnd.id : p.gndId,
-          gndName: matchedGnd ? matchedGnd.name : p.gndName,
-          gndCode: matchedGnd ? matchedGnd.code : p.gndCode,
-          ceoOfficer: ceo,
-          responsibleOfficer: ceo
-        };
+      const gndsToSeed = INITIAL_GNDS || [];
+
+      // 1. Seed GNDs first (so project normalization can use them)
+      const batchGnds = writeBatch(db);
+      gndsToSeed.forEach(g => batchGnds.set(doc(db, 'gnds', g.id), g));
+      await batchGnds.commit();
+
+      // 2. Seed Projects
+      const batchProj = writeBatch(db);
+      (INITIAL_PROJECTS || []).forEach((p, i) => {
+        const normalized = normalizeProjectRecord(p, i, gndsToSeed);
+        batchProj.set(doc(db, 'projects', normalized.id), normalized);
       });
-    } catch {
-      return INITIAL_PROJECTS;
-    }
-  });
+      await batchProj.commit();
 
-  const [categories, setCategories] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
-      return saved ? JSON.parse(saved) : INITIAL_CATEGORIES;
-    } catch {
-      return INITIAL_CATEGORIES;
-    }
-  });
+      // 3. Seed Categories
+      const batchCats = writeBatch(db);
+      (INITIAL_CATEGORIES || []).forEach(c => batchCats.set(doc(db, 'categories', c.id), c));
+      await batchCats.commit();
 
-  const [evidence, setEvidence] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.EVIDENCE);
-      return saved ? JSON.parse(saved) : INITIAL_EVIDENCE;
-    } catch {
-      return INITIAL_EVIDENCE;
-    }
-  });
+      // 4. Seed Evidence
+      const batchEvid = writeBatch(db);
+      (INITIAL_EVIDENCE || []).forEach((e, i) => {
+        const evId = e?.id || `EVD-${String(i + 1).padStart(3, '0')}`;
+        batchEvid.set(doc(db, 'evidence', evId), { ...e, id: evId });
+      });
+      await batchEvid.commit();
 
-  const [gnds, setGnds] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.GNDS);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+      // 5. Write settings document (triggers onSnapshot → setLoading(false))
+      await setDoc(doc(db, 'settings', 'config'), {
+        financialYears: Array.isArray(SECRETARIAT_META?.years)
+          ? SECRETARIAT_META.years
+          : [2026, 2025, 2024],
+        customCeos: [],
+        ceoDirectory: {},
+        isDemoData: true
+      });
+    } catch (err) {
+      console.error('Firestore seed error:', err);
+      setDbError(err?.message || 'Failed to initialize database. Check your Firebase credentials.');
+      setLoading(false);
+    }
+  }, []);
+
+  // ── Real-time Firestore Listeners ─────────────────────────────────────────
+  useEffect(() => {
+    // 1. Projects
+    const unsubProjects = onSnapshot(
+      collection(db, 'projects'),
+      snapshot => {
+        const data = snapshot.docs.map(d => ({ ...d.data() }));
+        setProjects(data.map((p, i) => normalizeProjectRecord(p, i, gndsRef.current)));
+      },
+      err => {
+        console.error('Projects listener error:', err);
+        setDbError(err?.message || 'Could not load projects');
+      }
+    );
+
+    // 2. GNDs
+    const unsubGnds = onSnapshot(
+      collection(db, 'gnds'),
+      snapshot => {
+        const data = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+        setGnds(data);
+        gndsRef.current = data;
+      },
+      err => console.error('GNDs listener error:', err)
+    );
+
+    // 3. Categories
+    const unsubCategories = onSnapshot(
+      collection(db, 'categories'),
+      snapshot => {
+        setCategories(snapshot.docs.map(d => ({ ...d.data(), id: d.id })));
+      },
+      err => console.error('Categories listener error:', err)
+    );
+
+    // 4. Evidence
+    const unsubEvidence = onSnapshot(
+      collection(db, 'evidence'),
+      snapshot => {
+        setEvidence(snapshot.docs.map(d => ({ ...d.data(), id: d.id })));
+      },
+      err => console.error('Evidence listener error:', err)
+    );
+
+    // 5. Settings — triggers seeding on first run if document doesn't exist
+    const unsubSettings = onSnapshot(
+      doc(db, 'settings', 'config'),
+      snap => {
+        if (snap.exists()) {
+          const data = snap.data();
+          setFinancialYears(data.financialYears || [2026, 2025, 2024]);
+          setCustomCeos(data.customCeos || []);
+          setCeoDirectory(data.ceoDirectory || {});
+          setIsDemoData(data.isDemoData !== false);
+          setLoading(false);
+        } else {
+          // First run — auto-seed all collections
+          seedInitialData();
         }
+      },
+      err => {
+        console.error('Settings listener error:', err);
+        setDbError(err?.message || 'Could not connect to database. Check Firebase credentials.');
+        setLoading(false);
       }
-      return INITIAL_GNDS;
-    } catch {
-      return INITIAL_GNDS;
-    }
-  });
+    );
 
-  const [financialYears, setFinancialYears] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.YEARS);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-      return Array.isArray(SECRETARIAT_META.years) ? SECRETARIAT_META.years : [2026, 2025, 2024];
-    } catch {
-      return [2026, 2025, 2024];
-    }
-  });
+    return () => {
+      unsubProjects();
+      unsubGnds();
+      unsubCategories();
+      unsubEvidence();
+      unsubSettings();
+    };
+  }, [seedInitialData]);
 
-  const [customCeos, setCustomCeos] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.CEOS);
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [ceoDirectory, setCeoDirectory] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.CEO_DIRECTORY);
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
-
-  const [isDemoData, setIsDemoData] = useState(() => {
-    return !localStorage.getItem(STORAGE_KEYS.CUSTOM_FLAG);
-  });
-
-  // Dynamically extract all unique Community Empowerment Officers (CEO) from GND records + custom registered CEOs
-  const ceoOfficers = useMemo(() => {
-    const fromGnds = gnds.map(g => g.ceoOfficer?.trim()).filter(Boolean);
-    const combined = Array.from(new Set([...fromGnds, ...customCeos])).sort();
-    return combined.length > 0 ? combined : COMMUNITY_EMPOWERMENT_OFFICERS;
-  }, [gnds, customCeos]);
-
-  // Sync to local storage
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(projects));
-  }, [projects]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
-  }, [categories]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.EVIDENCE, JSON.stringify(evidence));
-  }, [evidence]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.GNDS, JSON.stringify(gnds));
-  }, [gnds]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.YEARS, JSON.stringify(financialYears));
-  }, [financialYears]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.CEOS, JSON.stringify(customCeos));
-  }, [customCeos]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.CEO_DIRECTORY, JSON.stringify(ceoDirectory));
-  }, [ceoDirectory]);
-
-  // 2. Filter State
+  // ── Filter State (local only — not persisted to Firestore) ───────────────
   const [filters, setFilters] = useState({
     gndId: 'all',
     category: 'all',
@@ -163,510 +261,640 @@ export function ProjectProvider({ children }) {
     endDate: ''
   });
 
-  const resetFilters = () => {
-    setFilters({
-      gndId: 'all',
-      category: 'all',
-      status: 'all',
-      year: 'all',
-      officer: 'all',
-      search: '',
-      startDate: '',
-      endDate: ''
-    });
-  };
+  const resetFilters = () => setFilters({
+    gndId: 'all',
+    category: 'all',
+    status: 'all',
+    year: 'all',
+    officer: 'all',
+    search: '',
+    startDate: '',
+    endDate: ''
+  });
 
-  // 3. Delayed / Flagged Indicator Detector
+  // ── CEO Officers (derived) ────────────────────────────────────────────────
+  const ceoOfficers = useMemo(() => {
+    const fromGnds = (gnds || []).map(g => g?.ceoOfficer?.trim()).filter(Boolean);
+    const combined = Array.from(new Set([...fromGnds, ...(customCeos || [])])).sort();
+    return combined.length > 0 ? combined : (COMMUNITY_EMPOWERMENT_OFFICERS || []);
+  }, [gnds, customCeos]);
+
+  // ── Alert Detection ───────────────────────────────────────────────────────
   const getProjectAlerts = (project) => {
+    if (!project) return [];
     const alerts = [];
-    const today = new Date('2026-09-13'); // Reference planning date
+    const today = new Date('2026-09-13');
+    const pStatus = project?.status || project?.stage || '';
+    const pPhys = Number(project?.physicalProgress ?? project?.progress ?? 0) || 0;
+    const pFin = Number(project?.financialProgress ?? 0) || 0;
 
-    // 1. Agreement Pending
-    if (project.status === 'Agreement Pending') {
+    if (pStatus === 'Agreement Pending') {
       alerts.push({
-        type: 'AGREEMENT_PENDING',
-        label: 'Agreement Pending',
-        severity: 'high',
+        type: 'AGREEMENT_PENDING', label: 'Agreement Pending', severity: 'high',
         badge: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
         description: 'Contract agreement has not been finalized.'
       });
     }
 
-    // 2. Work Not Started (after procurement/agreement)
-    const stageIdx = WORKFLOW_STAGES.indexOf(project.status);
-    if ((stageIdx >= 9 && stageIdx <= 10) && project.physicalProgress === 0) {
+    const stageIdx = (WORKFLOW_STAGES || []).indexOf(pStatus);
+    if ((stageIdx >= 9 && stageIdx <= 10) && pPhys === 0) {
       alerts.push({
-        type: 'WORK_NOT_STARTED',
-        label: 'Work Not Started',
-        severity: 'high',
+        type: 'WORK_NOT_STARTED', label: 'Work Not Started', severity: 'high',
         badge: 'bg-orange-500/20 text-orange-300 border-orange-500/40',
         description: 'Agreement executed but physical ground work has 0% progress.'
       });
     }
 
-    // 3. Completion Date Passed
-    if (project.expectedCompletionDate) {
+    if (project?.expectedCompletionDate) {
       const compDate = new Date(project.expectedCompletionDate);
-      if (today > compDate && !['Completed', 'Bill Submitted', 'Bill Paid'].includes(project.status)) {
+      if (today > compDate && !['Completed', 'Bill Submitted', 'Bill Paid'].includes(pStatus)) {
         const daysOver = Math.round((today - compDate) / (1000 * 60 * 60 * 24));
         alerts.push({
           type: 'COMPLETION_DATE_PASSED',
-          label: `Target Date Exceeded (${daysOver}d overdue)`,
-          severity: 'urgent',
+          label: `Target Date Exceeded (${daysOver}d overdue)`, severity: 'urgent',
           badge: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
           description: `Scheduled target completion date (${project.expectedCompletionDate}) has elapsed.`
         });
       }
     }
 
-    // 4. Progress Below Expected (e.g. provisioned > 30 days ago, ongoing, but physical < 30%)
-    if (project.status === 'Work Ongoing' && project.physicalProgress < 30) {
+    if ((pStatus === 'Work Ongoing' || pStatus === 'Execution') && pPhys < 30) {
       alerts.push({
-        type: 'PROGRESS_BELOW_EXPECTED',
-        label: 'Progress Below Expected',
-        severity: 'medium',
+        type: 'PROGRESS_BELOW_EXPECTED', label: 'Progress Below Expected', severity: 'medium',
         badge: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40',
         description: 'Ongoing work progress is lagging behind planning branch schedule.'
       });
     }
 
-    // 5. Bill Pending
-    if (project.status === 'Completed' && project.financialProgress < 100) {
+    if (pStatus === 'Completed' && pFin < 100) {
       alerts.push({
-        type: 'BILL_PENDING',
-        label: 'Bill Pending',
-        severity: 'medium',
+        type: 'BILL_PENDING', label: 'Bill Pending', severity: 'medium',
         badge: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
         description: 'Physical work 100% finished but contractor voucher settlement is pending.'
       });
     }
 
-    // 6. Financial Progress Low discrepancy
-    if (project.physicalProgress > 40 && (project.physicalProgress - project.financialProgress) > 30) {
+    if (pPhys > 40 && (pPhys - pFin) > 30) {
       alerts.push({
-        type: 'FINANCIAL_PROGRESS_LOW',
-        label: 'Financial Progress Low',
-        severity: 'medium',
+        type: 'FINANCIAL_PROGRESS_LOW', label: 'Financial Progress Low', severity: 'medium',
         badge: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
-        description: `Physical progress is ${project.physicalProgress}% while financial disbursement is only ${project.financialProgress}%.`
+        description: `Physical progress is ${pPhys}% while financial disbursement is only ${pFin}%.`
       });
     }
 
-    // 7. Explicit Issues Flag from registry
-    if (project.issues?.hasIssue) {
+    if (project?.issues?.hasIssue) {
       alerts.push({
         type: 'EXPLICIT_ISSUE',
-        label: `Issue Flagged: ${project.issues.escalationLevel || 'Review'}`,
-        severity: project.issues.escalationLevel?.toLowerCase() === 'urgent' ? 'urgent' : 'high',
+        label: `Issue Flagged: ${project?.issues?.escalationLevel || 'Review'}`,
+        severity: project?.issues?.escalationLevel?.toLowerCase() === 'urgent' ? 'urgent' : 'high',
         badge: 'bg-red-500/20 text-red-300 border-red-500/40',
-        description: project.issues.description || 'Special management intervention requested.'
+        description: project?.issues?.description || 'Special management intervention requested.'
       });
     }
 
     return alerts;
   };
 
-  // 4. Filtered Projects Computation
+  // ── Filtered Projects ─────────────────────────────────────────────────────
   const filteredProjects = useMemo(() => {
-    return projects.filter(proj => {
-      // GND Filter with flexible string normalization (strips hyphens, extra spaces, special chars)
-      if (filters.gndId !== 'all') {
-        if (!isGndMatch(proj, filters.gndId, gnds)) {
-          return false;
-        }
+    const list = Array.isArray(projects) ? projects : [];
+    return list.filter(proj => {
+      if (!proj) return false;
+
+      if (filters?.gndId && filters.gndId !== 'all') {
+        if (!isGndMatch(proj, filters.gndId, gnds || [])) return false;
       }
-      // Category Filter
-      if (filters.category !== 'all' && proj.category !== filters.category) {
+      if (filters?.category && filters.category !== 'all' && proj?.category !== filters.category) {
         return false;
       }
-      // Status Filter
-      if (filters.status !== 'all' && proj.status !== filters.status) {
-        return false;
+      if (filters?.status && filters.status !== 'all') {
+        const pStatus = proj?.status || proj?.stage || '';
+        if (pStatus !== filters.status) return false;
       }
-      // Year Filter
-      if (filters.year !== 'all' && String(proj.year || 2026) !== String(filters.year)) {
-        return false;
+      if (filters?.year && filters.year !== 'all') {
+        const pYear = String(proj?.year || proj?.financialYear || '2026');
+        if (pYear !== String(filters.year)) return false;
       }
-      // Community Empowerment Officer (CEO) Filter
-      if (filters.officer !== 'all') {
-        const projCeo = proj.ceoOfficer || proj.responsibleOfficer || gnds.find(g => g.id === proj.gndId)?.ceoOfficer;
-        if (projCeo !== filters.officer) {
-          return false;
-        }
+      if (filters?.officer && filters.officer !== 'all') {
+        const projCeo =
+          proj?.ceoOfficer ||
+          proj?.responsibleOfficer ||
+          (gnds || []).find(g => g?.id === proj?.gndId)?.ceoOfficer;
+        if (projCeo !== filters.officer) return false;
       }
-      // Date Range Filter (by expectedCompletionDate or provisionDate)
-      if (filters.startDate) {
-        const projDate = proj.expectedCompletionDate || proj.provisionDate;
+      if (filters?.startDate) {
+        const projDate = proj?.expectedCompletionDate || proj?.provisionDate;
         if (projDate && projDate < filters.startDate) return false;
       }
-      if (filters.endDate) {
-        const projDate = proj.expectedCompletionDate || proj.provisionDate;
+      if (filters?.endDate) {
+        const projDate = proj?.expectedCompletionDate || proj?.provisionDate;
         if (projDate && projDate > filters.endDate) return false;
       }
-      // Keyword Search
-      if (filters.search) {
-        const q = filters.search.toLowerCase().trim();
-        const matchName = proj.name.toLowerCase().includes(q);
-        const matchId = proj.id.toLowerCase().includes(q);
-        const matchGnd = (proj.gndName || '').toLowerCase().includes(q);
-        const projCeo = proj.ceoOfficer || proj.responsibleOfficer || gnds.find(g => g.id === proj.gndId)?.ceoOfficer || '';
+      if (filters?.search) {
+        const q = String(filters.search).toLowerCase().trim();
+        const matchName = String(proj?.name || proj?.title || '').toLowerCase().includes(q);
+        const matchId = String(proj?.id || '').toLowerCase().includes(q);
+        const matchGnd = String(proj?.gndName || proj?.gnd || '').toLowerCase().includes(q);
+        const projCeo = String(
+          proj?.ceoOfficer ||
+          proj?.responsibleOfficer ||
+          (gnds || []).find(g => g?.id === proj?.gndId)?.ceoOfficer || ''
+        );
         const matchOfficer = projCeo.toLowerCase().includes(q);
-        const matchCategory = (proj.category || '').toLowerCase().includes(q);
-        if (!matchName && !matchId && !matchGnd && !matchOfficer && !matchCategory) {
-          return false;
-        }
+        const matchCategory = String(proj?.category || '').toLowerCase().includes(q);
+        if (!matchName && !matchId && !matchGnd && !matchOfficer && !matchCategory) return false;
       }
       return true;
     });
   }, [projects, filters, gnds]);
 
-  // 5. Derived Executive Metrics from Filtered Projects
+  // ── Executive Metrics ─────────────────────────────────────────────────────
   const executiveMetrics = useMemo(() => {
-    const totalProjects = filteredProjects.length;
-    const totalAllocation = filteredProjects.reduce((acc, p) => acc + (p.allocation || 0), 0);
-    const totalExpenditure = filteredProjects.reduce((acc, p) => acc + (p.expenditure || 0), 0);
+    const list = Array.isArray(filteredProjects) ? filteredProjects : [];
+    const totalProjects = list.length;
+    const totalAllocation = list.reduce((acc, p) => acc + (parseFloat(p?.allocation) || 0), 0);
+    const totalExpenditure = list.reduce((acc, p) => acc + (parseFloat(p?.expenditure) || 0), 0);
 
-    const completed = filteredProjects.filter(p => ['Completed', 'Bill Submitted', 'Bill Paid'].includes(p.status)).length;
-    const ongoing = filteredProjects.filter(p => ['Work Started', 'Work Ongoing'].includes(p.status)).length;
-    const notStarted = filteredProjects.filter(p => [
-      'Project Identification', 'Proposal Preparation', 'Feasibility Study',
-      'Estimate Not Prepared', 'Estimate Prepared', 'Approval Pending',
-      'Approved', 'Procurement', 'Agreement Pending', 'Agreement Signed'
-    ].includes(p.status)).length;
+    const completed = list.filter(p =>
+      ['Completed', 'Bill Submitted', 'Bill Paid'].includes(p?.status || p?.stage)
+    ).length;
+    const ongoing = list.filter(p =>
+      ['Work Started', 'Work Ongoing', 'Execution'].includes(p?.status || p?.stage) ||
+      (Number(p?.physicalProgress ?? p?.progress ?? 0) > 0 &&
+       Number(p?.physicalProgress ?? p?.progress ?? 0) < 100)
+    ).length;
+    const notStarted = list.filter(p =>
+      [
+        'Project Identification', 'Proposal Preparation', 'Feasibility Study',
+        'Estimate Not Prepared', 'Estimate Prepared', 'Approval Pending',
+        'Approved', 'Procurement', 'Agreement Pending', 'Agreement Signed', 'Planning'
+      ].includes(p?.status || p?.stage) &&
+      Number(p?.physicalProgress ?? p?.progress ?? 0) === 0
+    ).length;
 
-    const delayed = filteredProjects.filter(p => getProjectAlerts(p).length > 0).length;
+    const delayed = list.filter(p => (getProjectAlerts(p) || []).length > 0).length;
 
     const avgPhysicalProgress = totalProjects > 0
-      ? Math.round(filteredProjects.reduce((acc, p) => acc + (p.physicalProgress || 0), 0) / totalProjects)
+      ? Math.round(
+          list.reduce((acc, p) => acc + (Number(p?.physicalProgress ?? p?.progress ?? 0) || 0), 0) /
+          totalProjects
+        )
       : 0;
 
     const totalFinancialProgress = totalAllocation > 0
       ? Math.round((totalExpenditure / totalAllocation) * 100)
       : 0;
 
-    // Unique GNDs in filtered set
-    const uniqueGndIds = new Set(filteredProjects.map(p => p.gndId));
-    const totalGnds = filters.gndId !== 'all' ? 1 : uniqueGndIds.size || gnds.length;
+    const uniqueGndIds = new Set(list.map(p => p?.gndId).filter(Boolean));
+    const totalGnds =
+      filters?.gndId && filters.gndId !== 'all'
+        ? 1
+        : uniqueGndIds.size || (gnds || []).length;
 
     return {
-      totalGnds,
-      totalProjects,
-      totalAllocation,
-      totalExpenditure,
-      completed,
-      ongoing,
-      notStarted,
-      delayed,
-      avgPhysicalProgress,
-      totalFinancialProgress
+      totalGnds, totalProjects, totalAllocation, totalExpenditure,
+      completed, ongoing, notStarted, delayed, avgPhysicalProgress, totalFinancialProgress
     };
-  }, [filteredProjects, filters.gndId, gnds]);
+  }, [filteredProjects, filters?.gndId, gnds]);
 
-  // 6. CRUD Operations
-  const addProject = (projectData) => {
-    const newId = `PRJ-TLW-${projectData.year || 2026}-${String(projects.length + 1).padStart(3, '0')}`;
-    const targetGnd = gnds.find(g => g.id === projectData.gndId) || gnds[0];
-    const stageIdx = WORKFLOW_STAGES.indexOf(projectData.status || 'Project Identification');
-    const assignedCeo = projectData.ceoOfficer || projectData.responsibleOfficer || targetGnd.ceoOfficer;
+  // ── Stats ─────────────────────────────────────────────────────────────────
+  const stats = useMemo(() => {
+    const list = Array.isArray(projects) ? projects : [];
+    const totalProjects = list.length;
+    const completed = list.filter(p =>
+      Number(p?.progress ?? p?.physicalProgress ?? 0) === 100 ||
+      p?.stage === 'Completed' || p?.status === 'Completed'
+    ).length;
+    const inProgress = list.filter(p => {
+      const prog = Number(p?.progress ?? p?.physicalProgress ?? 0);
+      return prog > 0 && prog < 100;
+    }).length;
+    const delayed = list.filter(p =>
+      p?.stage === 'Delayed' || p?.status === 'Delayed' ||
+      (getProjectAlerts(p) || []).length > 0
+    ).length;
+    const totalAllocation = list.reduce((acc, p) => acc + (parseFloat(p?.allocation) || 0), 0);
+    return { totalProjects, completed, inProgress, delayed, totalAllocation };
+  }, [projects]);
 
-    const newProject = {
-      ...projectData,
-      id: newId,
-      gndId: targetGnd.id,
-      gndName: targetGnd.name,
-      gndCode: targetGnd.code,
-      ceoOfficer: assignedCeo,
-      responsibleOfficer: assignedCeo,
-      allocation: parseFloat(projectData.allocation) || 0,
-      expenditure: parseFloat(projectData.expenditure) || 0,
-      physicalProgress: parseFloat(projectData.physicalProgress) || 0,
-      financialProgress: parseFloat(projectData.financialProgress) || 0,
-      currentStageIndex: stageIdx >= 0 ? stageIdx : 0,
-      status: projectData.status || 'Project Identification',
-      lastUpdated: new Date().toISOString().split('T')[0],
-      issues: projectData.issues || {
-        hasIssue: false,
-        description: '',
-        escalationLevel: 'Normal',
-        targetActionDate: ''
-      }
-    };
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CRUD — Project
+  // ═══════════════════════════════════════════════════════════════════════════
 
-    setProjects(prev => [newProject, ...prev]);
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_FLAG, 'true');
-    setIsDemoData(false);
-    return newProject;
-  };
+  const addProject = async (projectData) => {
+    if (!projectData) return;
+    try {
+      const currentGnds = gndsRef.current;
+      const currentProjects = projectsRef.current;
+      const newId = `PRJ-TLW-${projectData?.year || 2026}-${String(currentProjects.length + 1).padStart(3, '0')}`;
+      const targetGnd =
+        currentGnds.find(g => g?.id === projectData?.gndId) || currentGnds[0] || {};
+      const assignedCeo =
+        projectData?.ceoOfficer || projectData?.responsibleOfficer || targetGnd?.ceoOfficer || '';
 
-  const updateProject = (id, updatedFields) => {
-    setProjects(prev => prev.map(p => {
-      if (p.id !== id) return p;
-      const targetGnd = updatedFields.gndId ? gnds.find(g => g.id === updatedFields.gndId) : null;
-      const stageIdx = updatedFields.status ? WORKFLOW_STAGES.indexOf(updatedFields.status) : p.currentStageIndex;
-      const assignedCeo = updatedFields.ceoOfficer || updatedFields.responsibleOfficer || (targetGnd ? targetGnd.ceoOfficer : p.ceoOfficer);
-
-      return {
-        ...p,
-        ...updatedFields,
-        ...(targetGnd ? { gndName: targetGnd.name, gndCode: targetGnd.code } : {}),
+      const newProject = normalizeProjectRecord({
+        ...projectData,
+        id: newId,
+        gndId: targetGnd?.id || 'GND-01',
+        gndName: targetGnd?.name || '',
+        gndCode: targetGnd?.code || '',
         ceoOfficer: assignedCeo,
         responsibleOfficer: assignedCeo,
-        currentStageIndex: stageIdx >= 0 ? stageIdx : p.currentStageIndex,
+        allocation: parseFloat(projectData?.allocation) || 0,
+        expenditure: parseFloat(projectData?.expenditure) || 0,
+        physicalProgress: parseFloat(projectData?.physicalProgress) || 0,
+        financialProgress: parseFloat(projectData?.financialProgress) || 0,
+        status: projectData?.status || 'Project Identification',
         lastUpdated: new Date().toISOString().split('T')[0]
+      }, currentProjects.length, currentGnds);
+
+      await setDoc(doc(db, 'projects', newProject.id), newProject);
+      await setDoc(doc(db, 'settings', 'config'), { isDemoData: false }, { merge: true });
+    } catch (err) {
+      console.error('addProject error:', err);
+    }
+  };
+
+  const updateProject = async (id, updatedFields) => {
+    if (!id) return;
+    try {
+      const current = projectsRef.current.find(p => p?.id === id);
+      if (!current) return;
+      const updated = normalizeProjectRecord(
+        { ...current, ...updatedFields, lastUpdated: new Date().toISOString().split('T')[0] },
+        0,
+        gndsRef.current
+      );
+      await setDoc(doc(db, 'projects', id), updated);
+      await setDoc(doc(db, 'settings', 'config'), { isDemoData: false }, { merge: true });
+    } catch (err) {
+      console.error('updateProject error:', err);
+    }
+  };
+
+  const deleteProject = async (id) => {
+    if (!id) return;
+    try {
+      await deleteDoc(doc(db, 'projects', id));
+    } catch (err) {
+      console.error('deleteProject error:', err);
+    }
+  };
+
+  const updateProgress = async (id, { physicalProgress, financialProgress, status, remarks }) => {
+    if (!id) return;
+    try {
+      const updates = { lastUpdated: new Date().toISOString().split('T')[0] };
+      if (physicalProgress !== undefined) {
+        updates.physicalProgress = physicalProgress;
+        updates.progress = physicalProgress;
+      }
+      if (financialProgress !== undefined) updates.financialProgress = financialProgress;
+      if (status !== undefined) {
+        updates.status = status;
+        updates.stage = status;
+        const stageIdx = (WORKFLOW_STAGES || []).indexOf(status);
+        if (stageIdx >= 0) updates.currentStageIndex = stageIdx;
+      }
+      if (remarks !== undefined) updates.remarks = remarks;
+      await updateDoc(doc(db, 'projects', id), updates);
+    } catch (err) {
+      console.error('updateProgress error:', err);
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CRUD — GND
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const addGnd = async (gndData) => {
+    if (!gndData?.name?.trim()) return;
+    try {
+      const currentGnds = gndsRef.current;
+      const newGnd = {
+        id: `GND-${String(currentGnds.length + 1).padStart(2, '0')}`,
+        code: gndData?.code || '',
+        name: gndData?.name?.trim(),
+        displayName: gndData?.displayName?.trim() || gndData?.name?.trim(),
+        ceoOfficer: gndData?.ceoOfficer?.trim() || '',
+        phone: gndData?.phone?.trim() || '+94 52 225 8234'
       };
-    }));
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_FLAG, 'true');
-    setIsDemoData(false);
+      await setDoc(doc(db, 'gnds', newGnd.id), newGnd);
+      await setDoc(doc(db, 'settings', 'config'), { isDemoData: false }, { merge: true });
+    } catch (err) {
+      console.error('addGnd error:', err);
+    }
   };
 
-  const updateProgress = (id, { physicalProgress, financialProgress, status, remarks }) => {
-    setProjects(prev => prev.map(p => {
-      if (p.id !== id) return p;
-      const newStatus = status || p.status;
-      const stageIdx = WORKFLOW_STAGES.indexOf(newStatus);
-      const newPhys = physicalProgress !== undefined ? parseFloat(physicalProgress) : p.physicalProgress;
-      const newFin = financialProgress !== undefined ? parseFloat(financialProgress) : p.financialProgress;
-      const newExp = Math.round((p.allocation * newFin) / 100);
+  const updateGnd = async (id, updatedFields) => {
+    if (!id) return;
+    try {
+      const batch = writeBatch(db);
+      batch.update(doc(db, 'gnds', id), updatedFields);
 
-      return {
-        ...p,
-        physicalProgress: newPhys,
-        financialProgress: newFin,
-        expenditure: newExp,
-        status: newStatus,
-        currentStageIndex: stageIdx >= 0 ? stageIdx : p.currentStageIndex,
-        remarks: remarks !== undefined ? remarks : p.remarks,
-        lastUpdated: new Date().toISOString().split('T')[0]
-      };
-    }));
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_FLAG, 'true');
+      // Cascade updates to all projects in this GND
+      projectsRef.current
+        .filter(p => p?.gndId === id)
+        .forEach(p => {
+          const projUpdate = {};
+          if (updatedFields?.name !== undefined) projUpdate.gndName = updatedFields.name;
+          if (updatedFields?.code !== undefined) projUpdate.gndCode = updatedFields.code;
+          if (updatedFields?.ceoOfficer !== undefined) {
+            projUpdate.ceoOfficer = updatedFields.ceoOfficer;
+            projUpdate.responsibleOfficer = updatedFields.ceoOfficer;
+          }
+          if (Object.keys(projUpdate).length > 0) {
+            batch.update(doc(db, 'projects', p.id), projUpdate);
+          }
+        });
+
+      await batch.commit();
+      await setDoc(doc(db, 'settings', 'config'), { isDemoData: false }, { merge: true });
+    } catch (err) {
+      console.error('updateGnd error:', err);
+    }
   };
 
-  const deleteProject = (id) => {
-    setProjects(prev => prev.filter(p => p.id !== id));
-    setEvidence(prev => prev.filter(e => e.projectId !== id));
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_FLAG, 'true');
+  const deleteGnd = async (id) => {
+    if (!id) return;
+    try {
+      await deleteDoc(doc(db, 'gnds', id));
+    } catch (err) {
+      console.error('deleteGnd error:', err);
+    }
   };
 
-  const addCategory = ({ name, color }) => {
-    const newId = `cat-${categories.length + 1}`;
-    const newCat = {
-      id: newId,
-      name,
-      color: color || '#10b981',
-      badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-    };
-    setCategories(prev => [...prev, newCat]);
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_FLAG, 'true');
-    return newCat;
-  };
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CRUD — CEO / Officer
+  // ═══════════════════════════════════════════════════════════════════════════
 
-  const addEvidence = (newPhoto) => {
-    const newId = `EVD-${String(evidence.length + 1).padStart(4, '0')}`;
-    const item = {
-      ...newPhoto,
-      id: newId,
-      date: newPhoto.date || new Date().toISOString().split('T')[0]
-    };
-    setEvidence(prev => [item, ...prev]);
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_FLAG, 'true');
-    return item;
-  };
+  const addCeoOfficer = async ({ name, phone, email, designation, gndId }) => {
+    if (!name?.trim()) return null;
+    try {
+      const trimmed = name.trim();
+      const currentCeos = customCeosRef.current;
+      const currentDir = ceoDirectoryRef.current;
 
-  const updateEvidence = (id, updated) => {
-    setEvidence(prev => prev.map(e => e.id === id ? { ...e, ...updated } : e));
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_FLAG, 'true');
-  };
-
-  const deleteEvidence = (id) => {
-    setEvidence(prev => prev.filter(e => e.id !== id));
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_FLAG, 'true');
-  };
-
-  // GND Management CRUD
-  const addGnd = (newGndData) => {
-    const newId = `GND-${String(gnds.length + 1).padStart(3, '0')}`;
-    const newGnd = {
-      id: newId,
-      code: newGndData.code || '',
-      name: newGndData.name || '',
-      displayName: newGndData.displayName || newGndData.name || '',
-      ceoOfficer: newGndData.ceoOfficer || '',
-      phone: newGndData.phone || '+94 52 225 8234',
-      division: 'Talawakelle DS Division'
-    };
-    setGnds(prev => [...prev, newGnd]);
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_FLAG, 'true');
-    return newGnd;
-  };
-
-  const updateGnd = (id, updatedFields) => {
-    setGnds(prev => prev.map(g => g.id === id ? { ...g, ...updatedFields } : g));
-    // Cascade GND name/code/officer updates to linked projects
-    setProjects(prev => prev.map(p => {
-      if (p.gndId === id) {
-        return {
-          ...p,
-          gndName: updatedFields.name !== undefined ? updatedFields.name : p.gndName,
-          gndCode: updatedFields.code !== undefined ? updatedFields.code : p.gndCode,
-          ceoOfficer: updatedFields.ceoOfficer !== undefined ? updatedFields.ceoOfficer : p.ceoOfficer,
-          responsibleOfficer: updatedFields.ceoOfficer !== undefined ? updatedFields.ceoOfficer : p.responsibleOfficer
+      if (!currentCeos.includes(trimmed)) {
+        const newCeos = [...currentCeos, trimmed].sort();
+        const newDir = {
+          ...currentDir,
+          [trimmed]: {
+            name: trimmed,
+            phone: phone || '',
+            email: email || '',
+            designation: designation || 'Community Empowerment Officer (CEO)',
+            gndId: gndId || ''
+          }
         };
+        await updateDoc(doc(db, 'settings', 'config'), {
+          customCeos: newCeos,
+          ceoDirectory: newDir,
+          isDemoData: false
+        });
       }
-      return p;
-    }));
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_FLAG, 'true');
-  };
 
-  const deleteGnd = (id) => {
-    setGnds(prev => prev.filter(g => g.id !== id));
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_FLAG, 'true');
-  };
-
-  // CEO / Officer Management
-  const addCeoOfficer = ({ name, phone, email, designation, gndId }) => {
-    if (!name || !name.trim()) return null;
-    const trimmed = name.trim();
-    setCustomCeos(prev => {
-      if (prev.includes(trimmed)) return prev;
-      return [...prev, trimmed].sort();
-    });
-    setCeoDirectory(prev => ({
-      ...prev,
-      [trimmed]: {
-        name: trimmed,
-        phone: phone || '',
-        email: email || '',
-        designation: designation || 'Community Empowerment Officer (CEO)',
-        gndId: gndId || ''
+      if (gndId && gndId !== 'none' && gndId !== 'all') {
+        await updateDoc(doc(db, 'gnds', gndId), {
+          ceoOfficer: trimmed,
+          ...(phone ? { phone } : {})
+        });
       }
-    }));
-    // If gndId was selected, assign this CEO to that GND immediately
-    if (gndId && gndId !== 'none' && gndId !== 'all') {
-      updateGnd(gndId, {
-        ceoOfficer: trimmed,
-        ...(phone ? { phone } : {})
-      });
+      return trimmed;
+    } catch (err) {
+      console.error('addCeoOfficer error:', err);
+      return null;
     }
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_FLAG, 'true');
-    return trimmed;
   };
 
-  const renameOfficer = (oldName, newName) => {
+  const renameOfficer = async (oldName, newName) => {
     if (!oldName || !newName || oldName === newName) return;
-    const trimmedNew = newName.trim();
-    setGnds(prev => prev.map(g => g.ceoOfficer?.trim() === oldName.trim() ? { ...g, ceoOfficer: trimmedNew } : g));
-    setCustomCeos(prev => prev.map(c => c === oldName.trim() ? trimmedNew : c));
-    setCeoDirectory(prev => {
-      const copy = { ...prev };
-      if (copy[oldName.trim()]) {
-        copy[trimmedNew] = { ...copy[oldName.trim()], name: trimmedNew };
-        delete copy[oldName.trim()];
-      }
-      return copy;
-    });
-    setProjects(prev => prev.map(p => {
-      let changed = false;
-      const updated = { ...p };
-      if (p.ceoOfficer?.trim() === oldName.trim()) {
-        updated.ceoOfficer = trimmedNew;
-        changed = true;
-      }
-      if (p.responsibleOfficer?.trim() === oldName.trim()) {
-        updated.responsibleOfficer = trimmedNew;
-        changed = true;
-      }
-      return changed ? updated : p;
-    }));
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_FLAG, 'true');
-  };
+    try {
+      const trimmedOld = oldName.trim();
+      const trimmedNew = newName.trim();
+      const batch = writeBatch(db);
 
-  const removeOfficer = (officerName) => {
-    if (!officerName) return;
-    setGnds(prev => prev.map(g => g.ceoOfficer?.trim() === officerName.trim() ? { ...g, ceoOfficer: '' } : g));
-    setCustomCeos(prev => prev.filter(c => c !== officerName.trim()));
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_FLAG, 'true');
-  };
+      // Update GNDs
+      gndsRef.current
+        .filter(g => g?.ceoOfficer?.trim() === trimmedOld)
+        .forEach(g => batch.update(doc(db, 'gnds', g.id), { ceoOfficer: trimmedNew }));
 
-  // Category Management CRUD
-  const updateCategory = (id, updatedFields) => {
-    let oldName = null;
-    setCategories(prev => prev.map(c => {
-      if (c.id === id) {
-        oldName = c.name;
-        return { ...c, ...updatedFields };
+      // Update Projects
+      projectsRef.current.forEach(p => {
+        const updates = {};
+        if (p?.ceoOfficer?.trim() === trimmedOld) updates.ceoOfficer = trimmedNew;
+        if (p?.responsibleOfficer?.trim() === trimmedOld) updates.responsibleOfficer = trimmedNew;
+        if (Object.keys(updates).length > 0) {
+          batch.update(doc(db, 'projects', p.id), updates);
+        }
+      });
+
+      await batch.commit();
+
+      // Update settings
+      const currentCeos = customCeosRef.current;
+      const currentDir = { ...ceoDirectoryRef.current };
+      const newCeos = currentCeos.map(c => c === trimmedOld ? trimmedNew : c).sort();
+      if (currentDir[trimmedOld]) {
+        currentDir[trimmedNew] = { ...currentDir[trimmedOld], name: trimmedNew };
+        delete currentDir[trimmedOld];
       }
-      return c;
-    }));
-    if (oldName && updatedFields.name && updatedFields.name !== oldName) {
-      setProjects(prev => prev.map(p => p.category === oldName ? { ...p, category: updatedFields.name } : p));
+      await updateDoc(doc(db, 'settings', 'config'), {
+        customCeos: newCeos,
+        ceoDirectory: currentDir
+      });
+    } catch (err) {
+      console.error('renameOfficer error:', err);
     }
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_FLAG, 'true');
   };
 
-  const deleteCategory = (id) => {
-    setCategories(prev => prev.filter(c => c.id !== id));
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_FLAG, 'true');
+  const removeOfficer = async (officerName) => {
+    if (!officerName) return;
+    try {
+      const trimmed = officerName.trim();
+      const batch = writeBatch(db);
+
+      gndsRef.current
+        .filter(g => g?.ceoOfficer?.trim() === trimmed)
+        .forEach(g => batch.update(doc(db, 'gnds', g.id), { ceoOfficer: '' }));
+
+      await batch.commit();
+
+      const newCeos = customCeosRef.current.filter(c => c !== trimmed);
+      await updateDoc(doc(db, 'settings', 'config'), { customCeos: newCeos, isDemoData: false });
+    } catch (err) {
+      console.error('removeOfficer error:', err);
+    }
   };
 
-  // Financial Year Management
-  const addFinancialYear = (year) => {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CRUD — Category
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const addCategory = async (cat) => {
+    if (!cat?.name?.trim()) return;
+    try {
+      const newCat = {
+        id: `CAT-${String(categoriesRef.current.length + 1).padStart(2, '0')}`,
+        name: cat.name.trim(),
+        color: cat.color || '#10b981'
+      };
+      await setDoc(doc(db, 'categories', newCat.id), newCat);
+      await setDoc(doc(db, 'settings', 'config'), { isDemoData: false }, { merge: true });
+    } catch (err) {
+      console.error('addCategory error:', err);
+    }
+  };
+
+  const updateCategory = async (id, updatedFields) => {
+    if (!id) return;
+    try {
+      const oldCat = categoriesRef.current.find(c => c?.id === id);
+      await updateDoc(doc(db, 'categories', id), updatedFields);
+
+      // Cascade category name change to all affected projects
+      if (oldCat?.name && updatedFields?.name && updatedFields.name !== oldCat.name) {
+        const affectedProjects = projectsRef.current.filter(p => p?.category === oldCat.name);
+        if (affectedProjects.length > 0) {
+          const batch = writeBatch(db);
+          affectedProjects.forEach(p => {
+            batch.update(doc(db, 'projects', p.id), { category: updatedFields.name });
+          });
+          await batch.commit();
+        }
+      }
+    } catch (err) {
+      console.error('updateCategory error:', err);
+    }
+  };
+
+  const deleteCategory = async (id) => {
+    if (!id) return;
+    try {
+      await deleteDoc(doc(db, 'categories', id));
+    } catch (err) {
+      console.error('deleteCategory error:', err);
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CRUD — Financial Year
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const addFinancialYear = async (year) => {
     const y = parseInt(year, 10);
     if (isNaN(y)) return;
-    setFinancialYears(prev => {
-      if (prev.includes(y)) return prev;
-      return [...prev, y].sort((a, b) => b - a);
-    });
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_FLAG, 'true');
+    try {
+      const current = financialYearsRef.current || [];
+      if (current.includes(y)) return;
+      const newYears = [...current, y].sort((a, b) => b - a);
+      await updateDoc(doc(db, 'settings', 'config'), { financialYears: newYears });
+    } catch (err) {
+      console.error('addFinancialYear error:', err);
+    }
   };
 
-  const deleteFinancialYear = (year) => {
+  const deleteFinancialYear = async (year) => {
     const y = parseInt(year, 10);
-    setFinancialYears(prev => prev.filter(item => item !== y));
-    localStorage.setItem(STORAGE_KEYS.CUSTOM_FLAG, 'true');
+    try {
+      const newYears = (financialYearsRef.current || []).filter(item => item !== y);
+      await updateDoc(doc(db, 'settings', 'config'), { financialYears: newYears });
+    } catch (err) {
+      console.error('deleteFinancialYear error:', err);
+    }
   };
 
-  // Reset to original demo register data
-  const resetToDemoData = () => {
-    localStorage.removeItem(STORAGE_KEYS.PROJECTS);
-    localStorage.removeItem(STORAGE_KEYS.CATEGORIES);
-    localStorage.removeItem(STORAGE_KEYS.EVIDENCE);
-    localStorage.removeItem(STORAGE_KEYS.GNDS);
-    localStorage.removeItem(STORAGE_KEYS.YEARS);
-    localStorage.removeItem(STORAGE_KEYS.CEOS);
-    localStorage.removeItem(STORAGE_KEYS.CEO_DIRECTORY);
-    localStorage.removeItem(STORAGE_KEYS.CUSTOM_FLAG);
-    setProjects(INITIAL_PROJECTS);
-    setCategories(INITIAL_CATEGORIES);
-    setEvidence(INITIAL_EVIDENCE);
-    setGnds(INITIAL_GNDS);
-    setFinancialYears(Array.isArray(SECRETARIAT_META.years) ? SECRETARIAT_META.years : [2026, 2025, 2024]);
-    setCustomCeos([]);
-    setCeoDirectory({});
-    setIsDemoData(true);
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CRUD — Evidence
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const addEvidence = async (item) => {
+    if (!item) return;
+    try {
+      const newEv = {
+        id: `EVD-${String((evidence || []).length + 1).padStart(3, '0')}`,
+        projectId: item.projectId || 'PRJ-01',
+        activity: item.activity || 'During',
+        description: item.description || '',
+        imageUrl: item.imageUrl || '',
+        uploadedBy: item.uploadedBy || 'Technical Officer',
+        date: item.date || new Date().toISOString().split('T')[0]
+      };
+      await setDoc(doc(db, 'evidence', newEv.id), newEv);
+    } catch (err) {
+      console.error('addEvidence error:', err);
+    }
   };
+
+  const updateEvidence = async (id, updatedFields) => {
+    if (!id) return;
+    try {
+      await updateDoc(doc(db, 'evidence', id), updatedFields);
+    } catch (err) {
+      console.error('updateEvidence error:', err);
+    }
+  };
+
+  const deleteEvidence = async (id) => {
+    if (!id) return;
+    try {
+      await deleteDoc(doc(db, 'evidence', id));
+    } catch (err) {
+      console.error('deleteEvidence error:', err);
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Reset to Demo Data (clears Firestore, re-seeds from mockData)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const resetToDemoData = async () => {
+    try {
+      setLoading(true);
+      // Clear all collections and the settings doc
+      await Promise.all([
+        clearCollection('projects'),
+        clearCollection('gnds'),
+        clearCollection('categories'),
+        clearCollection('evidence'),
+        deleteDoc(doc(db, 'settings', 'config'))
+      ]);
+      // settings/config deletion triggers onSnapshot → !snap.exists() → seedInitialData()
+    } catch (err) {
+      console.error('resetToDemoData error:', err);
+      setLoading(false);
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Export to JSON (reads from local state — no Firestore call needed)
+  // ═══════════════════════════════════════════════════════════════════════════
 
   const exportDataJSON = () => {
-    const data = {
-      projects,
-      categories,
-      evidence,
-      gnds,
-      financialYears,
-      customCeos,
-      ceoDirectory,
-      exportDate: new Date().toISOString()
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Talawakelle_DS_Projects_${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const data = {
+        projects: projects || [],
+        categories: categories || [],
+        evidence: evidence || [],
+        gnds: gnds || [],
+        financialYears: financialYears || [],
+        customCeos: customCeos || [],
+        ceoDirectory: ceoDirectory || {},
+        exportDate: new Date().toISOString()
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Talawakelle_DS_Projects_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('JSON Export error:', e);
+    }
   };
 
-  // Modal States
+  // ─── Modal State (local only) ─────────────────────────────────────────────
   const [selectedProject, setSelectedProject] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isAddProjectOpen, setIsAddProjectOpen] = useState(false);
@@ -680,93 +908,195 @@ export function ProjectProvider({ children }) {
   const [evidenceTargetProjectId, setEvidenceTargetProjectId] = useState(null);
 
   const openProjectDetail = (proj) => {
-    setSelectedProject(proj);
-    setIsDetailOpen(true);
+    if (proj) {
+      setSelectedProject(proj);
+      setIsDetailOpen(true);
+    }
   };
 
-  const closeProjectDetail = () => {
-    setIsDetailOpen(false);
+  const closeProjectDetail = () => setIsDetailOpen(false);
+
+  // ─── Full Context Value ───────────────────────────────────────────────────
+  const value = {
+    // Status
+    loading,
+    dbError,
+    // Data
+    projects: projects || [],
+    setProjects,
+    filteredProjects: filteredProjects || [],
+    gnds: gnds || [],
+    setGnds,
+    categories: categories || [],
+    evidence: evidence || [],
+    financialYears: financialYears || [2026, 2025, 2024],
+    years: (financialYears || [2026, 2025, 2024]).map(String),
+    ceos: ceoOfficers || [],
+    ceoOfficers: ceoOfficers || [],
+    customCeos: customCeos || [],
+    ceoDirectory: ceoDirectory || {},
+    // Filters
+    filters: filters || {},
+    setFilters,
+    resetFilters,
+    // Metrics
+    executiveMetrics: executiveMetrics || {},
+    stats: stats || {},
+    totalProjects: stats?.totalProjects || 0,
+    completedProjects: stats?.completed || 0,
+    inProgressProjects: stats?.inProgress || 0,
+    delayedProjects: stats?.delayed || 0,
+    totalAllocation: stats?.totalAllocation || 0,
+    // Meta
+    secretariatMeta: SECRETARIAT_META || {},
+    SECRETARIAT_META: SECRETARIAT_META || {},
+    workflowStages: WORKFLOW_STAGES || [],
+    WORKFLOW_STAGES: WORKFLOW_STAGES || [],
+    isDemoData,
+    // Helpers
+    getProjectAlerts,
+    normalizeGndString,
+    isGndMatch,
+    // Project CRUD
+    addProject,
+    updateProject,
+    deleteProject,
+    updateProgress,
+    // GND CRUD
+    addGnd,
+    updateGnd,
+    deleteGnd,
+    // CEO / Officer CRUD
+    addCeoOfficer,
+    renameOfficer,
+    removeOfficer,
+    // Category CRUD
+    addCategory,
+    updateCategory,
+    deleteCategory,
+    // Year CRUD
+    addFinancialYear,
+    deleteFinancialYear,
+    // Evidence CRUD
+    addEvidence,
+    updateEvidence,
+    deleteEvidence,
+    // Demo / Export
+    resetToDemoData,
+    exportDataJSON,
+    // Modals
+    selectedProject,
+    setSelectedProject,
+    isDetailOpen,
+    openProjectDetail,
+    closeProjectDetail,
+    isAddProjectOpen,
+    setIsAddProjectOpen,
+    isEditProjectOpen,
+    setIsEditProjectOpen,
+    isAddCategoryOpen,
+    setIsAddCategoryOpen,
+    isAddGndOpen,
+    setIsAddGndOpen,
+    isAddCeoOpen,
+    setIsAddCeoOpen,
+    isQuickUpdateOpen,
+    setIsQuickUpdateOpen,
+    isAddEvidenceOpen,
+    setIsAddEvidenceOpen,
+    isSettingsOpen,
+    setIsSettingsOpen,
+    evidenceTargetProjectId,
+    setEvidenceTargetProjectId
   };
 
   return (
-    <ProjectContext.Provider value={{
-      projects,
-      filteredProjects,
-      gnds,
-      setGnds,
-      categories,
-      evidence,
-      financialYears,
-      filters,
-      setFilters,
-      resetFilters,
-      executiveMetrics,
-      getProjectAlerts,
-      addProject,
-      updateProject,
-      deleteProject,
-      updateProgress,
-      // GND CRUD
-      addGnd,
-      updateGnd,
-      deleteGnd,
-      // CEO / Officer CRUD
-      addCeoOfficer,
-      renameOfficer,
-      removeOfficer,
-      ceoDirectory,
-      // Category CRUD
-      addCategory,
-      updateCategory,
-      deleteCategory,
-      // Year CRUD
-      addFinancialYear,
-      deleteFinancialYear,
-      addEvidence,
-      updateEvidence,
-      deleteEvidence,
-      resetToDemoData,
-      exportDataJSON,
-      isDemoData,
-      WORKFLOW_STAGES,
-      SECRETARIAT_META,
-      ceoOfficers,
-      normalizeGndString,
-      isGndMatch,
-      // Modals
-      selectedProject,
-      setSelectedProject,
-      isDetailOpen,
-      openProjectDetail,
-      closeProjectDetail,
-      isAddProjectOpen,
-      setIsAddProjectOpen,
-      isEditProjectOpen,
-      setIsEditProjectOpen,
-      isAddCategoryOpen,
-      setIsAddCategoryOpen,
-      isAddGndOpen,
-      setIsAddGndOpen,
-      isAddCeoOpen,
-      setIsAddCeoOpen,
-      isQuickUpdateOpen,
-      setIsQuickUpdateOpen,
-      isAddEvidenceOpen,
-      setIsAddEvidenceOpen,
-      isSettingsOpen,
-      setIsSettingsOpen,
-      evidenceTargetProjectId,
-      setEvidenceTargetProjectId
-    }}>
+    <ProjectContext.Provider value={value}>
       {children}
     </ProjectContext.Provider>
   );
 }
 
+// ─── Hook: useProject ─────────────────────────────────────────────────────────
+// Returns full fallback defaults if called outside ProjectProvider
 export function useProject() {
   const context = useContext(ProjectContext);
   if (!context) {
-    throw new Error('useProject must be used within a ProjectProvider');
+    return {
+      loading: false,
+      dbError: null,
+      projects: [],
+      filteredProjects: [],
+      setProjects: () => {},
+      stats: { totalProjects: 0, completed: 0, inProgress: 0, delayed: 0, totalAllocation: 0 },
+      executiveMetrics: {
+        totalGnds: 0, totalProjects: 0, totalAllocation: 0, totalExpenditure: 0,
+        completed: 0, ongoing: 0, notStarted: 0, delayed: 0,
+        avgPhysicalProgress: 0, totalFinancialProgress: 0
+      },
+      getProjectAlerts: () => [],
+      totalProjects: 0,
+      completedProjects: 0,
+      inProgressProjects: 0,
+      delayedProjects: 0,
+      totalAllocation: 0,
+      categories: INITIAL_CATEGORIES || [],
+      evidence: INITIAL_EVIDENCE || [],
+      gnds: INITIAL_GNDS || [],
+      years: ['2026', '2025', '2024'],
+      financialYears: [2026, 2025, 2024],
+      ceos: COMMUNITY_EMPOWERMENT_OFFICERS || [],
+      ceoOfficers: COMMUNITY_EMPOWERMENT_OFFICERS || [],
+      ceoDirectory: {},
+      secretariatMeta: SECRETARIAT_META || {},
+      SECRETARIAT_META: SECRETARIAT_META || {},
+      workflowStages: WORKFLOW_STAGES || [],
+      WORKFLOW_STAGES: WORKFLOW_STAGES || [],
+      filters: { gndId: 'all', category: 'all', status: 'all', year: 'all', officer: 'all', search: '', startDate: '', endDate: '' },
+      setFilters: () => {},
+      resetFilters: () => {},
+      selectedGnd: 'ALL', setSelectedGnd: () => {},
+      selectedYear: 'ALL', setSelectedYear: () => {},
+      selectedCategory: 'ALL', setSelectedCategory: () => {},
+      selectedCeo: 'ALL', setSelectedCeo: () => {},
+      searchQuery: '', setSearchQuery: () => {},
+      addProject: async () => {},
+      updateProject: async () => {},
+      deleteProject: async () => {},
+      updateProgress: async () => {},
+      addGnd: async () => {},
+      updateGnd: async () => {},
+      deleteGnd: async () => {},
+      addCeoOfficer: async () => null,
+      renameOfficer: async () => {},
+      removeOfficer: async () => {},
+      addCategory: async () => {},
+      updateCategory: async () => {},
+      deleteCategory: async () => {},
+      addFinancialYear: async () => {},
+      deleteFinancialYear: async () => {},
+      addEvidence: async () => {},
+      updateEvidence: async () => {},
+      deleteEvidence: async () => {},
+      resetToDemoData: async () => {},
+      exportDataJSON: () => {},
+      isDemoData: true,
+      normalizeGndString: (s) => s || '',
+      isGndMatch: () => false,
+      selectedProject: null, setSelectedProject: () => {},
+      isDetailOpen: false, openProjectDetail: () => {}, closeProjectDetail: () => {},
+      isAddProjectOpen: false, setIsAddProjectOpen: () => {},
+      isEditProjectOpen: false, setIsEditProjectOpen: () => {},
+      isAddCategoryOpen: false, setIsAddCategoryOpen: () => {},
+      isAddGndOpen: false, setIsAddGndOpen: () => {},
+      isAddCeoOpen: false, setIsAddCeoOpen: () => {},
+      isQuickUpdateOpen: false, setIsQuickUpdateOpen: () => {},
+      isAddEvidenceOpen: false, setIsAddEvidenceOpen: () => {},
+      isSettingsOpen: false, setIsSettingsOpen: () => {},
+      evidenceTargetProjectId: null, setEvidenceTargetProjectId: () => {}
+    };
   }
   return context;
 }
+
+export { ProjectContext };

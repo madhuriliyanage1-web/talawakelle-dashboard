@@ -4,12 +4,12 @@ import { X, Sliders, CheckCircle2 } from 'lucide-react';
 
 export default function QuickUpdateProgressModal() {
   const {
-    isQuickUpdateOpen,
-    setIsQuickUpdateOpen,
-    selectedProject,
-    WORKFLOW_STAGES,
-    updateProgress
-  } = useProject();
+    isQuickUpdateOpen = false,
+    setIsQuickUpdateOpen = () => {},
+    selectedProject = null,
+    WORKFLOW_STAGES = [],
+    updateProgress = () => {}
+  } = useProject() || {};
 
   const [physical, setPhysical] = useState(0);
   const [financial, setFinancial] = useState(0);
@@ -18,10 +18,10 @@ export default function QuickUpdateProgressModal() {
 
   useEffect(() => {
     if (selectedProject) {
-      setPhysical(selectedProject.physicalProgress || 0);
-      setFinancial(selectedProject.financialProgress || 0);
-      setStatus(selectedProject.status || 'Work Ongoing');
-      setRemarks(selectedProject.remarks || '');
+      setPhysical(Number(selectedProject?.physicalProgress ?? selectedProject?.progress ?? 0));
+      setFinancial(Number(selectedProject?.financialProgress ?? 0));
+      setStatus(selectedProject?.status || selectedProject?.stage || 'Work Ongoing');
+      setRemarks(selectedProject?.remarks || '');
     }
   }, [selectedProject]);
 
@@ -29,18 +29,25 @@ export default function QuickUpdateProgressModal() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    updateProgress(selectedProject.id, {
-      physicalProgress: physical,
-      financialProgress: financial,
-      status,
-      remarks
-    });
-    setIsQuickUpdateOpen(false);
+    if (selectedProject?.id) {
+      updateProgress?.(selectedProject.id, {
+        physicalProgress: physical,
+        financialProgress: financial,
+        status,
+        remarks
+      });
+    }
+    setIsQuickUpdateOpen?.(false);
   };
+
+  const pId = selectedProject?.id || 'PROJ';
+  const pName = selectedProject?.name || selectedProject?.title || 'Project';
+  const pOfficer = selectedProject?.ceoOfficer || selectedProject?.responsibleOfficer || 'Unassigned';
+  const pAlloc = parseFloat(selectedProject?.allocation) || 0;
 
   return (
     <div
-      onClick={() => setIsQuickUpdateOpen(false)}
+      onClick={() => setIsQuickUpdateOpen?.(false)}
       className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
     >
       <div
@@ -53,12 +60,12 @@ export default function QuickUpdateProgressModal() {
             <div>
               <h3 className="text-base font-bold text-white">Quick Progress Update</h3>
               <p className="text-[11px] text-slate-400">
-                {selectedProject.id} • {selectedProject.name} • <span className="text-teal-300 font-semibold">CEO: {selectedProject.ceoOfficer || selectedProject.responsibleOfficer || 'Unassigned'}</span>
+                {pId} • {pName} • <span className="text-teal-300 font-semibold">CEO: {pOfficer}</span>
               </p>
             </div>
           </div>
           <button
-            onClick={() => setIsQuickUpdateOpen(false)}
+            onClick={() => setIsQuickUpdateOpen?.(false)}
             className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400"
           >
             <X className="w-4 h-4" />
@@ -103,7 +110,7 @@ export default function QuickUpdateProgressModal() {
               className="w-full accent-amber-500 h-2 bg-slate-700 rounded-lg cursor-pointer"
             />
             <div className="text-[10px] text-slate-400">
-              Calculated Expenditure: Rs. {((selectedProject.allocation * financial) / 100000000).toFixed(2)} Mn
+              Calculated Expenditure: Rs. {((pAlloc * financial) / 100000000).toFixed(2)} Mn
             </div>
           </div>
 
@@ -117,7 +124,7 @@ export default function QuickUpdateProgressModal() {
               onChange={(e) => setStatus(e.target.value)}
               className="w-full p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:ring-1 focus:ring-emerald-500"
             >
-              {WORKFLOW_STAGES.map(s => (
+              {(WORKFLOW_STAGES || []).map(s => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
@@ -140,7 +147,7 @@ export default function QuickUpdateProgressModal() {
           <div className="pt-3 border-t border-slate-800 flex items-center justify-end space-x-2">
             <button
               type="button"
-              onClick={() => setIsQuickUpdateOpen(false)}
+              onClick={() => setIsQuickUpdateOpen?.(false)}
               className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-semibold"
             >
               Cancel

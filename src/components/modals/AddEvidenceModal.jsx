@@ -4,20 +4,20 @@ import { X, Camera, Upload, Plus } from 'lucide-react';
 
 export default function AddEvidenceModal() {
   const {
-    isAddEvidenceOpen,
-    setIsAddEvidenceOpen,
-    projects,
-    evidenceTargetProjectId,
-    addEvidence,
-    SECRETARIAT_META,
-    ceoOfficers
-  } = useProject();
+    isAddEvidenceOpen = false,
+    setIsAddEvidenceOpen = () => {},
+    projects = [],
+    evidenceTargetProjectId = null,
+    addEvidence = () => {},
+    SECRETARIAT_META = {},
+    ceoOfficers = []
+  } = useProject() || {};
 
-  const [projectId, setProjectId] = useState(evidenceTargetProjectId || projects[0]?.id || '');
+  const [projectId, setProjectId] = useState(evidenceTargetProjectId || (projects || [])[0]?.id || '');
   const [activity, setActivity] = useState('During');
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
-  const [uploadedBy, setUploadedBy] = useState(ceoOfficers[0] || SECRETARIAT_META.officers[0]);
+  const [uploadedBy, setUploadedBy] = useState((ceoOfficers || [])[0] || (SECRETARIAT_META?.officers || [])[0] || 'Technical Officer');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
   if (!isAddEvidenceOpen) return null;
@@ -31,7 +31,7 @@ export default function AddEvidenceModal() {
   ];
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
+    const file = e?.target?.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -47,13 +47,13 @@ export default function AddEvidenceModal() {
       alert('Please provide an image URL or choose a photo file.');
       return;
     }
-    if (!description.trim()) {
+    if (!description?.trim()) {
       alert('Please provide an inspection description.');
       return;
     }
 
-    addEvidence({
-      projectId: projectId || evidenceTargetProjectId || projects[0]?.id,
+    addEvidence?.({
+      projectId: projectId || evidenceTargetProjectId || (projects || [])[0]?.id || 'PRJ-01',
       activity,
       description: description.trim(),
       imageUrl,
@@ -61,16 +61,16 @@ export default function AddEvidenceModal() {
       date
     });
 
-    setIsAddEvidenceOpen(false);
+    setIsAddEvidenceOpen?.(false);
   };
 
   return (
     <div
-      onClick={() => setIsAddEvidenceOpen(false)}
+      onClick={() => setIsAddEvidenceOpen?.(false)}
       className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
     >
       <div
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => e?.stopPropagation?.()}
         className="relative max-w-lg w-full bg-slate-900 border border-slate-700 rounded-3xl overflow-hidden shadow-2xl p-6 text-slate-100 space-y-4 my-auto max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
@@ -79,7 +79,7 @@ export default function AddEvidenceModal() {
             <h3 className="text-base font-bold text-white">Upload Photographic Evidence</h3>
           </div>
           <button
-            onClick={() => setIsAddEvidenceOpen(false)}
+            onClick={() => setIsAddEvidenceOpen?.(false)}
             className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400"
           >
             <X className="w-4 h-4" />
@@ -91,13 +91,13 @@ export default function AddEvidenceModal() {
           <div>
             <label className="block text-slate-300 font-semibold mb-1">Target Project *</label>
             <select
-              value={projectId || evidenceTargetProjectId}
+              value={projectId || evidenceTargetProjectId || ''}
               onChange={(e) => setProjectId(e.target.value)}
               className="w-full p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:ring-1 focus:ring-emerald-500"
             >
-              {projects.map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.id} - {p.name.slice(0, 40)}...
+              {(projects || []).map(p => (
+                <option key={p?.id} value={p?.id}>
+                  {p?.id} - {(p?.name || p?.title || '').slice(0, 40)}...
                 </option>
               ))}
             </select>
@@ -202,7 +202,7 @@ export default function AddEvidenceModal() {
                 onChange={(e) => setUploadedBy(e.target.value)}
                 className="w-full p-2 rounded-xl bg-slate-800 border border-slate-700 text-white"
               >
-                {ceoOfficers.map(o => (
+                {(ceoOfficers || []).map(o => (
                   <option key={o} value={o}>{o}</option>
                 ))}
               </select>
@@ -212,7 +212,7 @@ export default function AddEvidenceModal() {
           <div className="pt-3 border-t border-slate-800 flex items-center justify-end space-x-2">
             <button
               type="button"
-              onClick={() => setIsAddEvidenceOpen(false)}
+              onClick={() => setIsAddEvidenceOpen?.(false)}
               className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 font-semibold"
             >
               Cancel

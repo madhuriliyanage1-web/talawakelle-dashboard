@@ -13,31 +13,31 @@ import {
 
 export default function ExecutiveReports() {
   const {
-    projects,
-    filteredProjects,
-    filters,
-    gnds,
-    categories,
-    executiveMetrics,
-    SECRETARIAT_META
-  } = useProject();
+    projects = [],
+    filteredProjects = [],
+    filters = {},
+    gnds = [],
+    categories = [],
+    executiveMetrics = {},
+    SECRETARIAT_META = {}
+  } = useProject() || {};
 
   const handlePrint = () => {
     window.print();
   };
 
   // Group stats by GND (filtered by active filters / CEO if selected)
-  const targetGnds = filters.officer !== 'all'
-    ? gnds.filter(g => g.ceoOfficer === filters.officer)
-    : gnds;
+  const targetGnds = (filters?.officer && filters.officer !== 'all')
+    ? (gnds || []).filter(g => g?.ceoOfficer === filters.officer)
+    : (gnds || []);
 
-  const gndMatrix = targetGnds.map(g => {
-    const pList = filteredProjects.filter(p => p.gndId === g.id);
-    const alloc = pList.reduce((sum, p) => sum + (p.allocation || 0), 0);
-    const exp = pList.reduce((sum, p) => sum + (p.expenditure || 0), 0);
-    const comp = pList.filter(p => ['Completed', 'Bill Submitted', 'Bill Paid'].includes(p.status)).length;
-    const ongoing = pList.filter(p => ['Work Started', 'Work Ongoing'].includes(p.status)).length;
-    const avgPhys = pList.length ? Math.round(pList.reduce((sum, p) => sum + p.physicalProgress, 0) / pList.length) : 0;
+  const gndMatrix = (targetGnds || []).map(g => {
+    const pList = (filteredProjects || []).filter(p => p?.gndId === g?.id);
+    const alloc = pList.reduce((sum, p) => sum + (parseFloat(p?.allocation) || 0), 0);
+    const exp = pList.reduce((sum, p) => sum + (parseFloat(p?.expenditure) || 0), 0);
+    const comp = pList.filter(p => ['Completed', 'Bill Submitted', 'Bill Paid'].includes(p?.status || p?.stage)).length;
+    const ongoing = pList.filter(p => ['Work Started', 'Work Ongoing', 'Execution'].includes(p?.status || p?.stage)).length;
+    const avgPhys = pList.length ? Math.round(pList.reduce((sum, p) => sum + (Number(p?.physicalProgress ?? p?.progress ?? 0) || 0), 0) / pList.length) : 0;
     const avgFin = alloc > 0 ? Math.round((exp / alloc) * 100) : 0;
 
     return {
@@ -50,7 +50,7 @@ export default function ExecutiveReports() {
       avgPhys,
       avgFin
     };
-  }).filter(item => item.total > 0 || filters.officer !== 'all');
+  }).filter(item => item.total > 0 || (filters?.officer && filters.officer !== 'all'));
 
   return (
     <div className="space-y-6">
@@ -99,7 +99,7 @@ export default function ExecutiveReports() {
             Progress Monitoring Review & District Secretariat Submission Matrix (2026)
           </p>
           <div className="text-[11px] text-slate-400 print:text-slate-500 pt-2 flex items-center justify-center space-x-4">
-            <span>District: Nuwara Eliya</span>
+            <span>District: {SECRETARIAT_META?.district || 'Nuwara Eliya'}</span>
             <span>•</span>
             <span>Date of Generation: {new Date().toLocaleDateString('en-GB')}</span>
             <span>•</span>
@@ -116,14 +116,14 @@ export default function ExecutiveReports() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 print:grid-cols-4">
             <div className="p-3.5 rounded-xl bg-slate-800/80 print:bg-slate-100 border border-slate-700 print:border-slate-300">
               <span className="text-[10px] uppercase font-bold text-slate-400 print:text-slate-600">Total Projects</span>
-              <p className="text-xl font-black text-white print:text-black">{projects.length}</p>
-              <span className="text-[10px] text-slate-400 print:text-slate-600">Across 34 GNDs</span>
+              <p className="text-xl font-black text-white print:text-black">{(projects || []).length}</p>
+              <span className="text-[10px] text-slate-400 print:text-slate-600">Across {(gnds || []).length} GNDs</span>
             </div>
 
             <div className="p-3.5 rounded-xl bg-slate-800/80 print:bg-slate-100 border border-slate-700 print:border-slate-300">
               <span className="text-[10px] uppercase font-bold text-slate-400 print:text-slate-600">Total Allocation</span>
               <p className="text-xl font-black text-amber-400 print:text-black">
-                Rs. {(executiveMetrics.totalAllocation / 1000000).toFixed(2)} Mn
+                Rs. {((Number(executiveMetrics?.totalAllocation) || 0) / 1000000).toFixed(2)} Mn
               </p>
               <span className="text-[10px] text-slate-400 print:text-slate-600">Approved Budget</span>
             </div>
@@ -131,20 +131,20 @@ export default function ExecutiveReports() {
             <div className="p-3.5 rounded-xl bg-slate-800/80 print:bg-slate-100 border border-slate-700 print:border-slate-300">
               <span className="text-[10px] uppercase font-bold text-slate-400 print:text-slate-600">Total Expenditure</span>
               <p className="text-xl font-black text-emerald-400 print:text-black">
-                Rs. {(executiveMetrics.totalExpenditure / 1000000).toFixed(2)} Mn
+                Rs. {((Number(executiveMetrics?.totalExpenditure) || 0) / 1000000).toFixed(2)} Mn
               </p>
               <span className="text-[10px] text-slate-400 print:text-slate-600">
-                {executiveMetrics.totalFinancialProgress}% Disbursed
+                {executiveMetrics?.totalFinancialProgress ?? 0}% Disbursed
               </span>
             </div>
 
             <div className="p-3.5 rounded-xl bg-slate-800/80 print:bg-slate-100 border border-slate-700 print:border-slate-300">
               <span className="text-[10px] uppercase font-bold text-slate-400 print:text-slate-600">Avg Physical Execution</span>
               <p className="text-xl font-black text-emerald-400 print:text-black">
-                {executiveMetrics.avgPhysicalProgress}%
+                {executiveMetrics?.avgPhysicalProgress ?? 0}%
               </p>
               <span className="text-[10px] text-slate-400 print:text-slate-600">
-                {executiveMetrics.completed} Completed
+                {executiveMetrics?.completed ?? 0} Completed
               </span>
             </div>
           </div>
@@ -172,25 +172,25 @@ export default function ExecutiveReports() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 print:divide-slate-200">
-                {gndMatrix.map((m, idx) => (
+                {(gndMatrix || []).map((m, idx) => (
                   <tr key={idx} className="print:text-black">
                     <td className="py-2 px-3 font-semibold">
-                      {m.gnd.code || ''} {m.gnd.displayName}
+                      {m?.gnd?.code || ''} {m?.gnd?.displayName || m?.gnd?.name || ''}
                     </td>
                     <td className="py-2 px-3 text-slate-400 print:text-slate-700">
-                      {m.gnd.ceoOfficer}
+                      {m?.gnd?.ceoOfficer || 'Unassigned'}
                     </td>
-                    <td className="py-2 px-3 text-center font-bold">{m.total}</td>
-                    <td className="py-2 px-3 text-center text-emerald-400 print:text-black font-semibold">{m.comp}</td>
-                    <td className="py-2 px-3 text-center text-blue-400 print:text-black font-semibold">{m.ongoing}</td>
+                    <td className="py-2 px-3 text-center font-bold">{m?.total || 0}</td>
+                    <td className="py-2 px-3 text-center text-emerald-400 print:text-black font-semibold">{m?.comp || 0}</td>
+                    <td className="py-2 px-3 text-center text-blue-400 print:text-black font-semibold">{m?.ongoing || 0}</td>
                     <td className="py-2 px-3 text-right font-mono font-bold">
-                      Rs. {(m.alloc / 1000000).toFixed(2)}
+                      Rs. {((m?.alloc || 0) / 1000000).toFixed(2)}
                     </td>
                     <td className="py-2 px-3 text-right font-mono font-bold">
-                      Rs. {(m.exp / 1000000).toFixed(2)}
+                      Rs. {((m?.exp || 0) / 1000000).toFixed(2)}
                     </td>
-                    <td className="py-2 px-3 text-center font-bold text-emerald-400 print:text-black">{m.avgPhys}%</td>
-                    <td className="py-2 px-3 text-center font-bold text-amber-400 print:text-black">{m.avgFin}%</td>
+                    <td className="py-2 px-3 text-center font-bold text-emerald-400 print:text-black">{m?.avgPhys || 0}%</td>
+                    <td className="py-2 px-3 text-center font-bold text-amber-400 print:text-black">{m?.avgFin || 0}%</td>
                   </tr>
                 ))}
               </tbody>

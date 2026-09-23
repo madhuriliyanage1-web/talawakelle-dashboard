@@ -42,30 +42,32 @@ ChartJS.register(
 
 export default function OverallDashboard({ onNavigateToTab }) {
   const {
-    executiveMetrics,
-    filteredProjects,
-    categories,
-    WORKFLOW_STAGES,
-    openProjectDetail,
-    getProjectAlerts
-  } = useProject();
+    executiveMetrics = {},
+    filteredProjects = [],
+    categories = [],
+    WORKFLOW_STAGES = [],
+    openProjectDetail = () => {},
+    getProjectAlerts = () => []
+  } = useProject() || {};
 
   const formatLKR = (val) => {
     if (!val) return 'Rs. 0.00 M';
-    const inMillions = val / 1000000;
+    const inMillions = Number(val) / 1000000;
     return `Rs. ${inMillions.toFixed(2)} Mn`;
   };
 
   // 1. Chart Data: GND-wise Project Allocation / Count (Top 8 GNDs)
   const gndMap = {};
-  filteredProjects.forEach(p => {
-    const key = p.gndCode || p.gndName.slice(0, 12);
+  (filteredProjects || []).forEach(p => {
+    if (!p) return;
+    const gName = p?.gndName || p?.gnd || '';
+    const key = p?.gndCode || gName.slice(0, 12) || 'Other';
     if (!gndMap[key]) {
       gndMap[key] = { count: 0, allocation: 0, physicalSum: 0 };
     }
     gndMap[key].count += 1;
-    gndMap[key].allocation += (p.allocation || 0) / 1000000;
-    gndMap[key].physicalSum += (p.physicalProgress || 0);
+    gndMap[key].allocation += (parseFloat(p?.allocation) || 0) / 1000000;
+    gndMap[key].physicalSum += (Number(p?.physicalProgress ?? p?.progress ?? 0) || 0);
   });
 
   const topGndKeys = Object.keys(gndMap).slice(0, 8);
@@ -89,22 +91,22 @@ export default function OverallDashboard({ onNavigateToTab }) {
 
   // 2. Chart Data: 15-Stage Workflow Distribution (Doughnut)
   const workflowBuckets = {
-    'Planning & Estimates': filteredProjects.filter(p => [
+    'Planning & Estimates': (filteredProjects || []).filter(p => [
       'Project Identification', 'Proposal Preparation', 'Feasibility Study',
-      'Estimate Not Prepared', 'Estimate Prepared'
-    ].includes(p.status)).length,
-    'Approvals & Procurement': filteredProjects.filter(p => [
+      'Estimate Not Prepared', 'Estimate Prepared', 'Planning'
+    ].includes(p?.status || p?.stage)).length,
+    'Approvals & Procurement': (filteredProjects || []).filter(p => [
       'Approval Pending', 'Approved', 'Procurement'
-    ].includes(p.status)).length,
-    'Agreements': filteredProjects.filter(p => [
+    ].includes(p?.status || p?.stage)).length,
+    'Agreements': (filteredProjects || []).filter(p => [
       'Agreement Pending', 'Agreement Signed'
-    ].includes(p.status)).length,
-    'Construction Ongoing': filteredProjects.filter(p => [
-      'Work Started', 'Work Ongoing'
-    ].includes(p.status)).length,
-    'Completed & Settled': filteredProjects.filter(p => [
+    ].includes(p?.status || p?.stage)).length,
+    'Construction Ongoing': (filteredProjects || []).filter(p => [
+      'Work Started', 'Work Ongoing', 'Execution'
+    ].includes(p?.status || p?.stage)).length,
+    'Completed & Settled': (filteredProjects || []).filter(p => [
       'Completed', 'Bill Submitted', 'Bill Paid'
-    ].includes(p.status)).length
+    ].includes(p?.status || p?.stage)).length
   };
 
   const doughnutData = {
@@ -126,15 +128,15 @@ export default function OverallDashboard({ onNavigateToTab }) {
   };
 
   // 3. Chart Data: Category Breakdown
-  const catNames = categories.map(c => c.name);
+  const catNames = (categories || []).map(c => c?.name).filter(Boolean);
   const catAllocations = catNames.map(cat => {
-    return filteredProjects
-      .filter(p => p.category === cat)
-      .reduce((acc, p) => acc + (p.allocation || 0) / 1000000, 0);
+    return (filteredProjects || [])
+      .filter(p => p?.category === cat)
+      .reduce((acc, p) => acc + (parseFloat(p?.allocation) || 0) / 1000000, 0);
   });
 
   const categoryBarData = {
-    labels: catNames.map(c => c.length > 20 ? c.slice(0, 20) + '...' : c),
+    labels: catNames.map(c => c?.length > 20 ? c.slice(0, 20) + '...' : (c || 'Other')),
     datasets: [
       {
         label: 'Budget (Rs. Mn)',
@@ -146,19 +148,19 @@ export default function OverallDashboard({ onNavigateToTab }) {
   };
 
   // 4. Chart Data: Physical vs Financial Comparison
-  const sampleProjects = filteredProjects.slice(0, 7);
+  const sampleProjects = (filteredProjects || []).slice(0, 7);
   const dualProgressData = {
-    labels: sampleProjects.map(p => p.name.slice(0, 14) + '...'),
+    labels: sampleProjects.map(p => (p?.name || p?.title || 'Project').slice(0, 14) + '...'),
     datasets: [
       {
         label: 'Physical Progress %',
-        data: sampleProjects.map(p => p.physicalProgress),
+        data: sampleProjects.map(p => Number(p?.physicalProgress ?? p?.progress ?? 0) || 0),
         backgroundColor: '#10B981',
         borderRadius: 4
       },
       {
         label: 'Financial Progress %',
-        data: sampleProjects.map(p => p.financialProgress),
+        data: sampleProjects.map(p => Number(p?.financialProgress ?? 0) || 0),
         backgroundColor: '#F59E0B',
         borderRadius: 4
       }
@@ -186,7 +188,7 @@ export default function OverallDashboard({ onNavigateToTab }) {
     }
   };
 
-  const flaggedList = filteredProjects.filter(p => getProjectAlerts(p).length > 0).slice(0, 4);
+  const flaggedList = (filteredProjects || []).filter(p => (getProjectAlerts?.(p) || []).length > 0).slice(0, 4);
 
   return (
     <div className="space-y-6">
@@ -209,14 +211,14 @@ export default function OverallDashboard({ onNavigateToTab }) {
 
         <div className="flex items-center space-x-3">
           <button
-            onClick={() => onNavigateToTab('master')}
+            onClick={() => onNavigateToTab?.('master')}
             className="flex items-center space-x-1.5 text-xs font-bold px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 transition"
           >
             <span>Master Register</span>
             <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
           </button>
           <button
-            onClick={() => onNavigateToTab('reports')}
+            onClick={() => onNavigateToTab?.('reports')}
             className="flex items-center space-x-1.5 text-xs font-bold px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-800 border border-amber-500/40 transition"
           >
             <span>District Report</span>
@@ -225,7 +227,7 @@ export default function OverallDashboard({ onNavigateToTab }) {
         </div>
       </div>
 
-      {/* KPI Cards Grid using .gov-card and .card-accent-* */}
+      {/* KPI Cards Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {/* Total GNDs */}
         <div className="gov-card card-accent-green p-4 relative">
@@ -234,7 +236,7 @@ export default function OverallDashboard({ onNavigateToTab }) {
             <Building2 className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="text-2xl font-black text-slate-900">
-            {executiveMetrics.totalGnds}
+            {executiveMetrics?.totalGnds ?? 0}
           </div>
           <p className="text-[11px] text-slate-500 mt-1">Grama Niladhari Divisions</p>
         </div>
@@ -246,7 +248,7 @@ export default function OverallDashboard({ onNavigateToTab }) {
             <FolderGit2 className="w-4 h-4 text-blue-600" />
           </div>
           <div className="text-2xl font-black text-slate-900">
-            {executiveMetrics.totalProjects}
+            {executiveMetrics?.totalProjects ?? (filteredProjects || []).length}
           </div>
           <p className="text-[11px] text-slate-500 mt-1">In filter criteria</p>
         </div>
@@ -258,10 +260,10 @@ export default function OverallDashboard({ onNavigateToTab }) {
             <Banknote className="w-4 h-4 text-amber-600" />
           </div>
           <div className="text-2xl font-black text-slate-900">
-            {formatLKR(executiveMetrics.totalAllocation)}
+            {formatLKR(executiveMetrics?.totalAllocation)}
           </div>
           <p className="text-[11px] text-slate-500 mt-1">
-            Exp: {formatLKR(executiveMetrics.totalExpenditure)}
+            Exp: {formatLKR(executiveMetrics?.totalExpenditure)}
           </p>
         </div>
 
@@ -272,7 +274,7 @@ export default function OverallDashboard({ onNavigateToTab }) {
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="text-2xl font-black text-emerald-600">
-            {executiveMetrics.completed}
+            {executiveMetrics?.completed ?? 0}
           </div>
           <p className="text-[11px] text-slate-500 mt-1">100% finished</p>
         </div>
@@ -284,7 +286,7 @@ export default function OverallDashboard({ onNavigateToTab }) {
             <Clock3 className="w-4 h-4 text-cyan-600" />
           </div>
           <div className="text-2xl font-black text-cyan-600">
-            {executiveMetrics.ongoing}
+            {executiveMetrics?.ongoing ?? 0}
           </div>
           <p className="text-[11px] text-slate-500 mt-1">Active site operations</p>
         </div>
@@ -296,7 +298,7 @@ export default function OverallDashboard({ onNavigateToTab }) {
             <Clock3 className="w-4 h-4 text-slate-500" />
           </div>
           <div className="text-2xl font-black text-slate-700">
-            {executiveMetrics.notStarted}
+            {executiveMetrics?.notStarted ?? 0}
           </div>
           <p className="text-[11px] text-slate-500 mt-1">Planning / procurement</p>
         </div>
@@ -308,7 +310,7 @@ export default function OverallDashboard({ onNavigateToTab }) {
             <AlertOctagon className="w-4 h-4 text-rose-600" />
           </div>
           <div className="text-2xl font-black text-rose-600">
-            {executiveMetrics.delayed}
+            {executiveMetrics?.delayed ?? 0}
           </div>
           <p className="text-[11px] text-rose-600/90 mt-1 font-semibold">Requires action</p>
         </div>
@@ -320,12 +322,12 @@ export default function OverallDashboard({ onNavigateToTab }) {
             <TrendingUp className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="text-2xl font-black text-slate-900">
-            {executiveMetrics.avgPhysicalProgress}%
+            {executiveMetrics?.avgPhysicalProgress ?? 0}%
           </div>
           <div className="w-full bg-slate-200 rounded-full h-1.5 mt-2 overflow-hidden">
             <div
               className="bg-emerald-500 h-full rounded-full"
-              style={{ width: `${executiveMetrics.avgPhysicalProgress}%` }}
+              style={{ width: `${Math.min(Math.max(Number(executiveMetrics?.avgPhysicalProgress || 0), 0), 100)}%` }}
             />
           </div>
         </div>
@@ -337,12 +339,12 @@ export default function OverallDashboard({ onNavigateToTab }) {
             <Percent className="w-4 h-4 text-amber-600" />
           </div>
           <div className="text-2xl font-black text-slate-900">
-            {executiveMetrics.totalFinancialProgress}%
+            {executiveMetrics?.totalFinancialProgress ?? 0}%
           </div>
           <div className="w-full bg-slate-200 rounded-full h-1.5 mt-2 overflow-hidden">
             <div
               className="bg-amber-500 h-full rounded-full"
-              style={{ width: `${executiveMetrics.totalFinancialProgress}%` }}
+              style={{ width: `${Math.min(Math.max(Number(executiveMetrics?.totalFinancialProgress || 0), 0), 100)}%` }}
             />
           </div>
         </div>
@@ -378,7 +380,7 @@ export default function OverallDashboard({ onNavigateToTab }) {
                 Workflow Stage Distribution
               </h3>
               <p className="text-[11px] text-slate-500">
-                Portfolio distribution across the 15-stage statutory lifecycle
+                Portfolio distribution across statutory lifecycles
               </p>
             </div>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
@@ -444,7 +446,7 @@ export default function OverallDashboard({ onNavigateToTab }) {
       </div>
 
       {/* Critical Alerts Spotlight */}
-      {flaggedList.length > 0 && (
+      {(flaggedList || []).length > 0 && (
         <div className="gov-card p-5 border-l-4 border-rose-500 bg-rose-50/30 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
@@ -454,7 +456,7 @@ export default function OverallDashboard({ onNavigateToTab }) {
               </h3>
             </div>
             <button
-              onClick={() => onNavigateToTab('delays')}
+              onClick={() => onNavigateToTab?.('delays')}
               className="text-xs font-bold text-rose-700 hover:text-rose-900 flex items-center space-x-1"
             >
               <span>View All Bottlenecks</span>
@@ -464,29 +466,34 @@ export default function OverallDashboard({ onNavigateToTab }) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {flaggedList.map(p => {
-              const alerts = getProjectAlerts(p);
+              const alerts = getProjectAlerts?.(p) || [];
+              const pId = p?.id || 'PROJ';
+              const pName = p?.name || p?.title || 'Project';
+              const pGnd = p?.gndCode || p?.gndName || p?.gnd || '';
+              const pProgress = Number(p?.physicalProgress ?? p?.progress ?? 0);
+
               return (
                 <div
-                  key={p.id}
-                  onClick={() => openProjectDetail(p)}
+                  key={pId}
+                  onClick={() => openProjectDetail?.(p)}
                   className="p-3.5 rounded-xl bg-white border border-slate-200 hover:border-rose-400 cursor-pointer shadow-sm transition flex items-start justify-between"
                 >
                   <div className="space-y-1 max-w-[80%]">
                     <div className="flex items-center space-x-2">
                       <span className="text-[10px] font-mono font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
-                        {p.id}
+                        {pId}
                       </span>
                       <span className="text-[10px] text-slate-600 font-semibold">
-                        {p.gndCode || p.gndName}
+                        {pGnd}
                       </span>
                     </div>
-                    <h4 className="text-xs font-bold text-slate-900 truncate">{p.name}</h4>
+                    <h4 className="text-xs font-bold text-slate-900 truncate">{pName}</h4>
                     <p className="text-[11px] text-rose-700 font-semibold">
-                      {alerts[0]?.label || 'Pending intervention'}
+                      {alerts?.[0]?.label || 'Pending intervention'}
                     </p>
                   </div>
                   <div className="text-right">
-                    <span className="text-xs font-bold text-amber-600">{p.physicalProgress}%</span>
+                    <span className="text-xs font-bold text-amber-600">{pProgress}%</span>
                     <p className="text-[9px] text-slate-500">Physical</p>
                   </div>
                 </div>

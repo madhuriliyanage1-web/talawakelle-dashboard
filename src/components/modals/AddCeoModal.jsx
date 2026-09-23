@@ -4,11 +4,11 @@ import { X, UserCheck, Plus, MapPin, Phone, Mail, BadgeInfo } from 'lucide-react
 
 export default function AddCeoModal() {
   const {
-    isAddCeoOpen,
-    setIsAddCeoOpen,
-    addCeoOfficer,
-    gnds
-  } = useProject();
+    isAddCeoOpen = false,
+    setIsAddCeoOpen = () => {},
+    addCeoOfficer = () => {},
+    gnds = []
+  } = useProject() || {};
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -20,16 +20,16 @@ export default function AddCeoModal() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!name.trim()) {
+    if (!name?.trim()) {
       alert('Please enter the Community Empowerment Officer name.');
       return;
     }
 
-    addCeoOfficer({
+    addCeoOfficer?.({
       name: name.trim(),
-      phone: phone.trim(),
-      email: email.trim(),
-      designation: designation.trim() || 'Community Empowerment Officer (CEO)',
+      phone: phone?.trim() || '',
+      email: email?.trim() || '',
+      designation: designation?.trim() || 'Community Empowerment Officer (CEO)',
       gndId: targetGndId
     });
 
@@ -39,16 +39,16 @@ export default function AddCeoModal() {
     setEmail('');
     setDesignation('Community Empowerment Officer (CEO)');
     setTargetGndId('');
-    setIsAddCeoOpen(false);
+    setIsAddCeoOpen?.(false);
   };
 
   return (
     <div
-      onClick={() => setIsAddCeoOpen(false)}
+      onClick={() => setIsAddCeoOpen?.(false)}
       className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn"
     >
       <div
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => e?.stopPropagation?.()}
         className="relative max-w-lg w-full bg-slate-900 border border-slate-700 rounded-3xl overflow-hidden shadow-2xl p-6 text-slate-100 space-y-4"
       >
         {/* Header */}
@@ -63,7 +63,7 @@ export default function AddCeoModal() {
             </div>
           </div>
           <button
-            onClick={() => setIsAddCeoOpen(false)}
+            onClick={() => setIsAddCeoOpen?.(false)}
             className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
           >
             <X className="w-4 h-4" />
@@ -147,9 +147,9 @@ export default function AddCeoModal() {
               className="w-full p-2 rounded-xl bg-slate-800 border border-slate-700 text-white focus:ring-1 focus:ring-teal-500"
             >
               <option value="">-- Leave Unassigned / Standalone Pool --</option>
-              {gnds.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.code ? `[${g.code}] ` : ''}{g.name} {g.ceoOfficer ? `(Current CEO: ${g.ceoOfficer})` : '(No CEO)'}
+              {(gnds || []).map((g) => (
+                <option key={g?.id} value={g?.id}>
+                  {g?.code ? `[${g.code}] ` : ''}{g?.name} {g?.ceoOfficer ? `(Current CEO: ${g.ceoOfficer})` : '(No CEO)'}
                 </option>
               ))}
             </select>
@@ -162,7 +162,7 @@ export default function AddCeoModal() {
           <div className="pt-3 border-t border-slate-800 flex items-center justify-end space-x-2">
             <button
               type="button"
-              onClick={() => setIsAddCeoOpen(false)}
+              onClick={() => setIsAddCeoOpen?.(false)}
               className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold transition"
             >
               Cancel

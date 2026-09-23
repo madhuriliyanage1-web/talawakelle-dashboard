@@ -16,36 +16,36 @@ import {
 
 export default function GlobalFilterBar() {
   const {
-    filters,
-    setFilters,
-    resetFilters,
-    gnds,
-    categories,
-    filteredProjects,
-    projects,
-    WORKFLOW_STAGES,
-    SECRETARIAT_META,
-    ceoOfficers,
-    financialYears,
-    setIsSettingsOpen,
-    setIsAddGndOpen,
-    setIsAddCeoOpen,
-    setIsAddCategoryOpen
-  } = useProject();
+    filters = {},
+    setFilters = () => {},
+    resetFilters = () => {},
+    gnds = [],
+    categories = [],
+    filteredProjects = [],
+    projects = [],
+    WORKFLOW_STAGES = [],
+    SECRETARIAT_META = {},
+    ceoOfficers = [],
+    financialYears = [],
+    setIsSettingsOpen = () => {},
+    setIsAddGndOpen = () => {},
+    setIsAddCeoOpen = () => {},
+    setIsAddCategoryOpen = () => {}
+  } = useProject() || {};
 
   const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters?.(prev => ({ ...(prev || {}), [key]: value }));
   };
 
   const activeCount = [
-    filters.gndId !== 'all',
-    filters.category !== 'all',
-    filters.status !== 'all',
-    filters.year !== 'all',
-    filters.officer !== 'all',
-    Boolean(filters.search),
-    Boolean(filters.startDate),
-    Boolean(filters.endDate)
+    filters?.gndId && filters.gndId !== 'all',
+    filters?.category && filters.category !== 'all',
+    filters?.status && filters.status !== 'all',
+    filters?.year && filters.year !== 'all',
+    filters?.officer && filters.officer !== 'all',
+    Boolean(filters?.search),
+    Boolean(filters?.startDate),
+    Boolean(filters?.endDate)
   ].filter(Boolean).length;
 
   return (
@@ -59,11 +59,11 @@ export default function GlobalFilterBar() {
             <input
               type="text"
               placeholder="Search by project title, ID, GND, CEO..."
-              value={filters.search}
+              value={filters?.search || ''}
               onChange={(e) => handleFilterChange('search', e.target.value)}
               className="w-full pl-9 pr-8 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition"
             />
-            {filters.search && (
+            {filters?.search && (
               <button
                 onClick={() => handleFilterChange('search', '')}
                 className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-700"
@@ -76,13 +76,13 @@ export default function GlobalFilterBar() {
           {/* Active Filter Counter & Quick Add Management Buttons */}
           <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto justify-between lg:justify-end">
             <div className="text-xs text-slate-600 hidden sm:block">
-              Showing <span className="font-bold text-slate-900">{filteredProjects.length}</span> of{' '}
-              <span className="font-semibold text-slate-600">{projects.length}</span> projects
+              Showing <span className="font-bold text-slate-900">{(filteredProjects || []).length}</span> of{' '}
+              <span className="font-semibold text-slate-600">{(projects || []).length}</span> projects
             </div>
 
             {activeCount > 0 && (
               <button
-                onClick={resetFilters}
+                onClick={() => resetFilters?.()}
                 className="flex items-center space-x-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition"
               >
                 <X className="w-3 h-3" />
@@ -94,7 +94,7 @@ export default function GlobalFilterBar() {
             <div className="flex items-center space-x-1.5">
               <button
                 type="button"
-                onClick={() => setIsAddGndOpen(true)}
+                onClick={() => setIsAddGndOpen?.(true)}
                 title="Quick Add Grama Niladhari Division (GND)"
                 className="flex items-center space-x-1 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 shadow-sm transition"
               >
@@ -104,7 +104,7 @@ export default function GlobalFilterBar() {
 
               <button
                 type="button"
-                onClick={() => setIsAddCeoOpen(true)}
+                onClick={() => setIsAddCeoOpen?.(true)}
                 title="Quick Add Community Empowerment Officer (CEO)"
                 className="flex items-center space-x-1 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 shadow-sm transition"
               >
@@ -114,7 +114,7 @@ export default function GlobalFilterBar() {
 
               <button
                 type="button"
-                onClick={() => setIsAddCategoryOpen(true)}
+                onClick={() => setIsAddCategoryOpen?.(true)}
                 title="Quick Add Programme Category"
                 className="hidden sm:flex items-center space-x-1 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 shadow-sm transition"
               >
@@ -124,7 +124,7 @@ export default function GlobalFilterBar() {
 
               <button
                 type="button"
-                onClick={() => setIsSettingsOpen(true)}
+                onClick={() => setIsSettingsOpen?.(true)}
                 title="Settings & Master Configuration"
                 className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200 transition"
               >
@@ -146,7 +146,7 @@ export default function GlobalFilterBar() {
               </label>
               <button
                 type="button"
-                onClick={() => setIsAddGndOpen(true)}
+                onClick={() => setIsAddGndOpen?.(true)}
                 title="Add New GND"
                 className="text-emerald-600 hover:text-emerald-800 font-extrabold text-xs px-1 leading-none transition"
               >
@@ -154,14 +154,14 @@ export default function GlobalFilterBar() {
               </button>
             </div>
             <select
-              value={filters.gndId}
+              value={filters?.gndId || 'all'}
               onChange={(e) => handleFilterChange('gndId', e.target.value)}
               className="w-full py-1.5 px-2 rounded-lg bg-slate-50 border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 font-medium"
             >
-              <option value="all">All GNDs ({gnds.length})</option>
-              {gnds.map(g => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
+              <option value="all">All GNDs ({(gnds || []).length})</option>
+              {(gnds || []).map(g => (
+                <option key={g?.id} value={g?.id}>
+                  {g?.name}
                 </option>
               ))}
             </select>
@@ -176,7 +176,7 @@ export default function GlobalFilterBar() {
               </label>
               <button
                 type="button"
-                onClick={() => setIsAddCategoryOpen(true)}
+                onClick={() => setIsAddCategoryOpen?.(true)}
                 title="Add New Category"
                 className="text-blue-600 hover:text-blue-800 font-extrabold text-xs px-1 leading-none transition"
               >
@@ -184,14 +184,14 @@ export default function GlobalFilterBar() {
               </button>
             </div>
             <select
-              value={filters.category}
+              value={filters?.category || 'all'}
               onChange={(e) => handleFilterChange('category', e.target.value)}
               className="w-full py-1.5 px-2 rounded-lg bg-slate-50 border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 font-medium"
             >
-              <option value="all">All Categories ({categories.length})</option>
-              {categories.map(c => (
-                <option key={c.id} value={c.name}>
-                  {c.name}
+              <option value="all">All Categories ({(categories || []).length})</option>
+              {(categories || []).map(c => (
+                <option key={c?.id} value={c?.name}>
+                  {c?.name}
                 </option>
               ))}
             </select>
@@ -199,17 +199,17 @@ export default function GlobalFilterBar() {
 
           {/* Workflow Status Selector */}
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1 flex items-center space-x-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1 flex items-center space-x-1">
               <Flag className="w-2.5 h-2.5 text-amber-600" />
               <span>Workflow Stage</span>
             </label>
             <select
-              value={filters.status}
+              value={filters?.status || 'all'}
               onChange={(e) => handleFilterChange('status', e.target.value)}
               className="w-full py-1.5 px-2 rounded-lg bg-slate-50 border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 font-medium"
             >
-              <option value="all">All Stages ({WORKFLOW_STAGES.length})</option>
-              {WORKFLOW_STAGES.map(s => (
+              <option value="all">All Stages ({(WORKFLOW_STAGES || []).length})</option>
+              {(WORKFLOW_STAGES || []).map(s => (
                 <option key={s} value={s}>
                   {s}
                 </option>
@@ -219,17 +219,17 @@ export default function GlobalFilterBar() {
 
           {/* Year Selector */}
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1 flex items-center space-x-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1 flex items-center space-x-1">
               <Calendar className="w-2.5 h-2.5 text-purple-600" />
               <span>Year</span>
             </label>
             <select
-              value={filters.year}
+              value={filters?.year || 'all'}
               onChange={(e) => handleFilterChange('year', e.target.value)}
               className="w-full py-1.5 px-2 rounded-lg bg-slate-50 border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 font-medium"
             >
-              <option value="all">All Years ({financialYears.length})</option>
-              {financialYears.map(y => (
+              <option value="all">All Years ({(financialYears || []).length})</option>
+              {(financialYears || []).map(y => (
                 <option key={y} value={y}>{y}</option>
               ))}
             </select>
@@ -247,7 +247,7 @@ export default function GlobalFilterBar() {
               </label>
               <button
                 type="button"
-                onClick={() => setIsAddCeoOpen(true)}
+                onClick={() => setIsAddCeoOpen?.(true)}
                 title="Add New CEO Officer"
                 className="text-teal-600 hover:text-teal-800 font-extrabold text-xs px-1 leading-none transition flex-shrink-0"
               >
@@ -255,13 +255,13 @@ export default function GlobalFilterBar() {
               </button>
             </div>
             <select
-              value={filters.officer}
+              value={filters?.officer || 'all'}
               onChange={(e) => handleFilterChange('officer', e.target.value)}
               className="w-full py-1.5 px-2 rounded-lg bg-slate-50 border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 font-medium truncate"
-              title={filters.officer !== 'all' ? filters.officer : 'Filter by Community Empowerment Officer (CEO)'}
+              title={filters?.officer !== 'all' ? filters?.officer : 'Filter by Community Empowerment Officer (CEO)'}
             >
-              <option value="all">All CEOs ({ceoOfficers.length})</option>
-              {ceoOfficers.map(ceo => (
+              <option value="all">All CEOs ({(ceoOfficers || []).length})</option>
+              {(ceoOfficers || []).map(ceo => (
                 <option key={ceo} value={ceo}>{ceo}</option>
               ))}
             </select>
@@ -269,13 +269,13 @@ export default function GlobalFilterBar() {
 
           {/* Target Date Range (End Date) */}
           <div>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1 flex items-center space-x-1">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1 flex items-center space-x-1">
               <Calendar className="w-2.5 h-2.5 text-rose-600" />
               <span>Target Before</span>
             </label>
             <input
               type="date"
-              value={filters.endDate}
+              value={filters?.endDate || ''}
               onChange={(e) => handleFilterChange('endDate', e.target.value)}
               className="w-full py-1.5 px-2 rounded-lg bg-slate-50 border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 font-medium"
             />

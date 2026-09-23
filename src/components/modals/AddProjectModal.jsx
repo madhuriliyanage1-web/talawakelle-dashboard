@@ -4,25 +4,25 @@ import { X, Plus, Save, Building } from 'lucide-react';
 
 export default function AddProjectModal() {
   const {
-    isAddProjectOpen,
-    setIsAddProjectOpen,
-    isEditProjectOpen,
-    setIsEditProjectOpen,
-    selectedProject,
-    gnds,
-    categories,
-    WORKFLOW_STAGES,
-    SECRETARIAT_META,
-    ceoOfficers,
-    addProject,
-    updateProject
-  } = useProject();
+    isAddProjectOpen = false,
+    setIsAddProjectOpen = () => {},
+    isEditProjectOpen = false,
+    setIsEditProjectOpen = () => {},
+    selectedProject = null,
+    gnds = [],
+    categories = [],
+    WORKFLOW_STAGES = [],
+    SECRETARIAT_META = {},
+    ceoOfficers = [],
+    addProject = () => {},
+    updateProject = () => {}
+  } = useProject() || {};
 
-  const isOpen = isAddProjectOpen || isEditProjectOpen;
-  const isEditing = isEditProjectOpen && selectedProject;
+  const isOpen = Boolean(isAddProjectOpen || isEditProjectOpen);
+  const isEditing = Boolean(isEditProjectOpen && selectedProject);
 
-  const defaultGnd = gnds[0];
-  const defaultCeo = defaultGnd?.ceoOfficer || ceoOfficers[0] || '';
+  const defaultGnd = (gnds || [])[0];
+  const defaultCeo = defaultGnd?.ceoOfficer || (ceoOfficers || [])[0] || '';
 
   const [formData, setFormData] = useState({
     name: '',
@@ -45,28 +45,28 @@ export default function AddProjectModal() {
 
   useEffect(() => {
     if (isEditing && selectedProject) {
-      const projCeo = selectedProject.ceoOfficer || selectedProject.responsibleOfficer || gnds.find(g => g.id === selectedProject.gndId)?.ceoOfficer || ceoOfficers[0];
+      const projCeo = selectedProject?.ceoOfficer || selectedProject?.responsibleOfficer || (gnds || []).find(g => g?.id === selectedProject?.gndId)?.ceoOfficer || (ceoOfficers || [])[0] || '';
       setFormData({
-        name: selectedProject.name || '',
-        gndId: selectedProject.gndId || gnds[0]?.id || '',
-        category: selectedProject.category || 'Rural Road Development',
-        description: selectedProject.description || '',
-        allocation: selectedProject.allocation || '',
-        expenditure: selectedProject.expenditure || '',
-        approvalDate: selectedProject.approvalDate || '',
-        provisionDate: selectedProject.provisionDate || '',
-        expectedCompletionDate: selectedProject.expectedCompletionDate || '',
-        status: selectedProject.status || 'Project Identification',
-        physicalProgress: selectedProject.physicalProgress || 0,
-        financialProgress: selectedProject.financialProgress || 0,
+        name: selectedProject?.name || selectedProject?.title || '',
+        gndId: selectedProject?.gndId || (gnds || [])[0]?.id || '',
+        category: selectedProject?.category || 'Rural Road Development',
+        description: selectedProject?.description || '',
+        allocation: selectedProject?.allocation ?? '',
+        expenditure: selectedProject?.expenditure ?? '',
+        approvalDate: selectedProject?.approvalDate || '',
+        provisionDate: selectedProject?.provisionDate || '',
+        expectedCompletionDate: selectedProject?.expectedCompletionDate || '',
+        status: selectedProject?.status || selectedProject?.stage || 'Project Identification',
+        physicalProgress: Number(selectedProject?.physicalProgress ?? selectedProject?.progress ?? 0),
+        financialProgress: Number(selectedProject?.financialProgress ?? 0),
         ceoOfficer: projCeo,
         responsibleOfficer: projCeo,
-        remarks: selectedProject.remarks || '',
-        year: selectedProject.year || 2026
+        remarks: selectedProject?.remarks || '',
+        year: selectedProject?.year || 2026
       });
     } else {
-      const defGnd = gnds[0];
-      const defCeo = defGnd?.ceoOfficer || ceoOfficers[0] || '';
+      const defGnd = (gnds || [])[0];
+      const defCeo = defGnd?.ceoOfficer || (ceoOfficers || [])[0] || '';
       setFormData({
         name: '',
         gndId: defGnd?.id || '',
@@ -91,8 +91,8 @@ export default function AddProjectModal() {
   if (!isOpen) return null;
 
   const handleClose = () => {
-    setIsAddProjectOpen(false);
-    setIsEditProjectOpen(false);
+    setIsAddProjectOpen?.(false);
+    setIsEditProjectOpen?.(false);
   };
 
   const handleSubmit = (e) => {
@@ -102,10 +102,10 @@ export default function AddProjectModal() {
       return;
     }
 
-    if (isEditing) {
-      updateProject(selectedProject.id, formData);
+    if (isEditing && selectedProject?.id) {
+      updateProject?.(selectedProject.id, formData);
     } else {
-      addProject(formData);
+      addProject?.(formData);
     }
     handleClose();
   };
@@ -122,7 +122,7 @@ export default function AddProjectModal() {
         <div className="p-5 bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border-b border-slate-800 flex items-center justify-between">
           <div>
             <h3 className="text-lg font-bold text-white">
-              {isEditing ? `Edit Project: ${selectedProject.id}` : 'Register New Development Project'}
+              {isEditing ? `Edit Project: ${selectedProject?.id || ''}` : 'Register New Development Project'}
             </h3>
             <p className="text-xs text-slate-400">
               Talawakelle Divisional Secretariat Planning Branch Record
@@ -162,7 +162,7 @@ export default function AddProjectModal() {
                 value={formData.gndId}
                 onChange={(e) => {
                   const newGndId = e.target.value;
-                  const chosenGnd = gnds.find(x => x.id === newGndId);
+                  const chosenGnd = (gnds || []).find(x => x?.id === newGndId);
                   setFormData(prev => ({
                     ...prev,
                     gndId: newGndId,
@@ -172,9 +172,9 @@ export default function AddProjectModal() {
                 }}
                 className="w-full p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:ring-1 focus:ring-emerald-500"
               >
-                {gnds.map(g => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
+                {(gnds || []).map(g => (
+                  <option key={g?.id} value={g?.id}>
+                    {g?.name}
                   </option>
                 ))}
               </select>
@@ -189,8 +189,8 @@ export default function AddProjectModal() {
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 className="w-full p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:ring-1 focus:ring-emerald-500"
               >
-                {categories.map(c => (
-                  <option key={c.id} value={c.name}>{c.name}</option>
+                {(categories || []).map(c => (
+                  <option key={c?.id} value={c?.name}>{c?.name}</option>
                 ))}
               </select>
             </div>
@@ -237,7 +237,7 @@ export default function AddProjectModal() {
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                 className="w-full p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:ring-1 focus:ring-emerald-500"
               >
-                {WORKFLOW_STAGES.map(s => (
+                {(WORKFLOW_STAGES || []).map(s => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
@@ -256,7 +256,7 @@ export default function AddProjectModal() {
                 })}
                 className="w-full p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:ring-1 focus:ring-emerald-500"
               >
-                {ceoOfficers.map(o => (
+                {(ceoOfficers || []).map(o => (
                   <option key={o} value={o}>{o}</option>
                 ))}
               </select>

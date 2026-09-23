@@ -19,51 +19,60 @@ import {
 
 export default function ProjectDetailModal() {
   const {
-    selectedProject,
-    isDetailOpen,
-    closeProjectDetail,
-    WORKFLOW_STAGES,
-    updateProgress,
-    evidence,
-    setIsQuickUpdateOpen,
-    setIsEditProjectOpen,
-    setIsAddEvidenceOpen,
-    setEvidenceTargetProjectId,
-    getProjectAlerts
-  } = useProject();
+    selectedProject = null,
+    isDetailOpen = false,
+    closeProjectDetail = () => {},
+    WORKFLOW_STAGES = [],
+    updateProgress = () => {},
+    evidence = [],
+    setIsQuickUpdateOpen = () => {},
+    setIsEditProjectOpen = () => {},
+    setIsAddEvidenceOpen = () => {},
+    setEvidenceTargetProjectId = () => {},
+    getProjectAlerts = () => []
+  } = useProject() || {};
 
   if (!isDetailOpen || !selectedProject) return null;
 
-  const currentStageIndex = WORKFLOW_STAGES.indexOf(selectedProject.status);
-  const alerts = getProjectAlerts(selectedProject);
-  const projectPhotos = evidence.filter(e => e.projectId === selectedProject.id);
+  const currentStageIndex = (WORKFLOW_STAGES || []).indexOf(selectedProject?.status || selectedProject?.stage);
+  const alerts = getProjectAlerts?.(selectedProject) || [];
+  const projectPhotos = (evidence || []).filter(e => e?.projectId === selectedProject?.id);
 
-  const handleStageClick = (stageName, index) => {
-    // Quick advance stage
-    let phys = selectedProject.physicalProgress;
-    let fin = selectedProject.financialProgress;
+  const handleStageClick = (stageName) => {
+    let phys = Number(selectedProject?.physicalProgress ?? selectedProject?.progress ?? 0);
+    let fin = Number(selectedProject?.financialProgress ?? 0);
     if (stageName === 'Completed') {
       phys = 100;
       fin = 100;
     } else if (stageName === 'Work Ongoing' && phys < 30) {
       phys = 50;
     }
-    updateProgress(selectedProject.id, {
-      status: stageName,
-      physicalProgress: phys,
-      financialProgress: fin,
-      remarks: `Stage updated to ${stageName} on ${new Date().toISOString().split('T')[0]}`
-    });
+    if (selectedProject?.id) {
+      updateProgress?.(selectedProject.id, {
+        status: stageName,
+        physicalProgress: phys,
+        financialProgress: fin,
+        remarks: `Stage updated to ${stageName} on ${new Date().toISOString().split('T')[0]}`
+      });
+    }
   };
 
   const handleAddPhoto = () => {
-    setEvidenceTargetProjectId(selectedProject.id);
-    setIsAddEvidenceOpen(true);
+    if (selectedProject?.id) {
+      setEvidenceTargetProjectId?.(selectedProject.id);
+      setIsAddEvidenceOpen?.(true);
+    }
   };
+
+  const pAlloc = parseFloat(selectedProject?.allocation) || 0;
+  const pExp = parseFloat(selectedProject?.expenditure) || 0;
+  const pPhys = Number(selectedProject?.physicalProgress ?? selectedProject?.progress ?? 0);
+  const pFin = Number(selectedProject?.financialProgress ?? 0);
+  const pOfficer = selectedProject?.ceoOfficer || selectedProject?.responsibleOfficer || 'Unassigned';
 
   return (
     <div
-      onClick={closeProjectDetail}
+      onClick={() => closeProjectDetail?.()}
       className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto"
     >
       <div
@@ -75,23 +84,23 @@ export default function ProjectDetailModal() {
           <div>
             <div className="flex items-center space-x-2 text-xs">
               <span className="px-2.5 py-0.5 rounded-md font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                {selectedProject.id}
+                {selectedProject?.id || 'PROJ'}
               </span>
               <span className="px-2.5 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700">
-                {selectedProject.category}
+                {selectedProject?.category || 'General'}
               </span>
               <span className="text-slate-400">
-                {selectedProject.gndCode} • {selectedProject.gndName}
+                {selectedProject?.gndCode || ''}{selectedProject?.gndCode && selectedProject?.gndName ? ' • ' : ''}{selectedProject?.gndName || selectedProject?.gnd || ''}
               </span>
             </div>
             <h2 className="text-lg sm:text-xl font-bold text-white mt-1.5">
-              {selectedProject.name}
+              {selectedProject?.name || selectedProject?.title || 'Project Details'}
             </h2>
-            <p className="text-xs text-slate-400 mt-0.5">{selectedProject.description}</p>
+            <p className="text-xs text-slate-400 mt-0.5">{selectedProject?.description || ''}</p>
           </div>
 
           <button
-            onClick={closeProjectDetail}
+            onClick={() => closeProjectDetail?.()}
             className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
           >
             <X className="w-5 h-5" />
@@ -107,22 +116,21 @@ export default function ProjectDetailModal() {
                 Statutory 15-Stage Workflow Timeline
               </h3>
               <span className="text-xs text-slate-400">
-                Current: <strong className="text-white">{selectedProject.status}</strong> (Stage {currentStageIndex + 1} of 15)
+                Current: <strong className="text-white">{selectedProject?.status || selectedProject?.stage || 'Planning'}</strong> (Stage {currentStageIndex >= 0 ? currentStageIndex + 1 : 1} of {(WORKFLOW_STAGES || []).length || 15})
               </span>
             </div>
 
             {/* Stepper Scroll Container */}
             <div className="overflow-x-auto pb-2 scrollbar-none">
               <div className="flex items-center space-x-1 min-w-[750px] p-2 bg-slate-950/60 rounded-2xl border border-slate-800">
-                {WORKFLOW_STAGES.map((stage, idx) => {
+                {(WORKFLOW_STAGES || []).map((stage, idx) => {
                   const isPast = idx < currentStageIndex;
                   const isCurrent = idx === currentStageIndex;
-                  const isFuture = idx > currentStageIndex;
 
                   return (
                     <button
                       key={stage}
-                      onClick={() => handleStageClick(stage, idx)}
+                      onClick={() => handleStageClick(stage)}
                       title={`Click to set stage to ${stage}`}
                       className={`flex-1 flex flex-col items-center p-2 rounded-xl text-center transition-all cursor-pointer ${
                         isCurrent
@@ -142,7 +150,7 @@ export default function ProjectDetailModal() {
           </div>
 
           {/* Active Alerts Banner */}
-          {alerts.length > 0 && (
+          {(alerts || []).length > 0 && (
             <div className="p-4 rounded-2xl bg-rose-950/20 border border-rose-500/40 space-y-2">
               <div className="flex items-center space-x-2 text-rose-300 font-bold text-xs">
                 <AlertTriangle className="w-4 h-4 text-rose-400" />
@@ -151,8 +159,8 @@ export default function ProjectDetailModal() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {alerts.map((a, i) => (
                   <div key={i} className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs">
-                    <p className="font-bold text-rose-300">{a.label}</p>
-                    <p className="text-[11px] text-slate-400">{a.description}</p>
+                    <p className="font-bold text-rose-300">{a?.label}</p>
+                    <p className="text-[11px] text-slate-400">{a?.description}</p>
                   </div>
                 ))}
               </div>
@@ -164,28 +172,28 @@ export default function ProjectDetailModal() {
             <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
               <span className="text-[10px] text-slate-400 uppercase font-bold">Approved Allocation</span>
               <p className="text-base font-black text-amber-400 mt-0.5">
-                Rs. {(selectedProject.allocation / 1000000).toFixed(2)} Mn
+                Rs. {(pAlloc / 1000000).toFixed(2)} Mn
               </p>
-              <p className="text-[10px] text-slate-500">LKR {selectedProject.allocation.toLocaleString()}</p>
+              <p className="text-[10px] text-slate-500">LKR {pAlloc.toLocaleString()}</p>
             </div>
 
             <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
               <span className="text-[10px] text-slate-400 uppercase font-bold">Actual Expenditure</span>
               <p className="text-base font-black text-emerald-400 mt-0.5">
-                Rs. {(selectedProject.expenditure / 1000000).toFixed(2)} Mn
+                Rs. {(pExp / 1000000).toFixed(2)} Mn
               </p>
-              <p className="text-[10px] text-slate-500">LKR {selectedProject.expenditure.toLocaleString()}</p>
+              <p className="text-[10px] text-slate-500">LKR {pExp.toLocaleString()}</p>
             </div>
 
             <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
               <span className="text-[10px] text-slate-400 uppercase font-bold">Physical Progress</span>
               <p className="text-base font-black text-white mt-0.5">
-                {selectedProject.physicalProgress}%
+                {pPhys}%
               </p>
               <div className="w-full bg-slate-700 rounded-full h-1 mt-1">
                 <div
                   className="bg-emerald-400 h-full rounded-full"
-                  style={{ width: `${selectedProject.physicalProgress}%` }}
+                  style={{ width: `${Math.min(Math.max(pPhys, 0), 100)}%` }}
                 />
               </div>
             </div>
@@ -193,12 +201,12 @@ export default function ProjectDetailModal() {
             <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
               <span className="text-[10px] text-slate-400 uppercase font-bold">Financial Progress</span>
               <p className="text-base font-black text-white mt-0.5">
-                {selectedProject.financialProgress}%
+                {pFin}%
               </p>
               <div className="w-full bg-slate-700 rounded-full h-1 mt-1">
                 <div
                   className="bg-amber-400 h-full rounded-full"
-                  style={{ width: `${selectedProject.financialProgress}%` }}
+                  style={{ width: `${Math.min(Math.max(pFin, 0), 100)}%` }}
                 />
               </div>
             </div>
@@ -208,32 +216,32 @@ export default function ProjectDetailModal() {
           <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
             <div>
               <span className="text-slate-400 text-[10px] uppercase block">Approval Date</span>
-              <span className="font-semibold text-slate-200">{selectedProject.approvalDate || 'N/A'}</span>
+              <span className="font-semibold text-slate-200">{selectedProject?.approvalDate || 'N/A'}</span>
             </div>
             <div>
               <span className="text-slate-400 text-[10px] uppercase block">Provision Received</span>
-              <span className="font-semibold text-slate-200">{selectedProject.provisionDate || 'N/A'}</span>
+              <span className="font-semibold text-slate-200">{selectedProject?.provisionDate || 'N/A'}</span>
             </div>
             <div>
               <span className="text-slate-400 text-[10px] uppercase block">Target Completion</span>
               <span className="font-semibold text-rose-300 font-mono">
-                {selectedProject.expectedCompletionDate || 'N/A'}
+                {selectedProject?.expectedCompletionDate || selectedProject?.year || 'N/A'}
               </span>
             </div>
             <div>
               <span className="text-slate-400 text-[10px] uppercase block">Community Empowerment Officer (CEO)</span>
               <span className="font-semibold text-slate-200">
-                {selectedProject.ceoOfficer || selectedProject.responsibleOfficer || 'Unassigned'}
+                {pOfficer}
               </span>
             </div>
           </div>
 
-          {/* Photographic Sequence (Before -> During -> Completed) */}
+          {/* Photographic Sequence */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center space-x-1.5">
                 <Camera className="w-3.5 h-3.5" />
-                <span>Attached Photographic Evidence Sequence ({projectPhotos.length})</span>
+                <span>Attached Photographic Evidence Sequence ({(projectPhotos || []).length})</span>
               </h3>
               <button
                 onClick={handleAddPhoto}
@@ -244,14 +252,14 @@ export default function ProjectDetailModal() {
               </button>
             </div>
 
-            {projectPhotos.length === 0 ? (
+            {(projectPhotos || []).length === 0 ? (
               <div className="p-6 rounded-xl bg-slate-950/40 border border-slate-800 text-center text-xs text-slate-400">
                 No inspection photos uploaded for this project yet.
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {['Before', 'During', 'Completed'].map(phase => {
-                  const photo = projectPhotos.find(p => p.activity === phase);
+                  const photo = (projectPhotos || []).find(p => p?.activity === phase);
                   return (
                     <div
                       key={phase}
@@ -259,13 +267,13 @@ export default function ProjectDetailModal() {
                     >
                       <div className="p-2 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-[11px] font-bold">
                         <span>{phase} Phase</span>
-                        {photo && <span className="text-[10px] text-slate-400">{photo.date}</span>}
+                        {photo && <span className="text-[10px] text-slate-400">{photo?.date}</span>}
                       </div>
                       {photo ? (
                         <div className="h-32 bg-slate-950 overflow-hidden relative">
                           <img
-                            src={photo.imageUrl}
-                            alt={photo.description}
+                            src={photo?.imageUrl}
+                            alt={photo?.description || 'Site photo'}
                             className="w-full h-full object-cover"
                           />
                         </div>
@@ -275,7 +283,7 @@ export default function ProjectDetailModal() {
                         </div>
                       )}
                       <div className="p-2.5 text-[11px] text-slate-300 flex-1">
-                        {photo ? photo.description : 'No photo uploaded for this stage.'}
+                        {photo ? photo?.description : 'No photo uploaded for this stage.'}
                       </div>
                     </div>
                   );
@@ -285,7 +293,7 @@ export default function ProjectDetailModal() {
           </div>
 
           {/* Remarks & Notes */}
-          {selectedProject.remarks && (
+          {selectedProject?.remarks && (
             <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-800 text-xs space-y-1">
               <span className="font-bold text-slate-400 uppercase text-[10px]">Planning Branch Remarks:</span>
               <p className="text-slate-300">{selectedProject.remarks}</p>
@@ -296,13 +304,13 @@ export default function ProjectDetailModal() {
         {/* Modal Footer with Actions */}
         <div className="p-4 bg-slate-850 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
           <div className="text-xs text-slate-400">
-            Last Updated: <span className="text-slate-200">{selectedProject.lastUpdated}</span>
+            Last Updated: <span className="text-slate-200">{selectedProject?.lastUpdated || 'N/A'}</span>
           </div>
 
           <div className="flex items-center space-x-2">
             <button
               onClick={() => {
-                setIsQuickUpdateOpen(true);
+                setIsQuickUpdateOpen?.(true);
               }}
               className="flex items-center space-x-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition"
             >
@@ -312,7 +320,7 @@ export default function ProjectDetailModal() {
 
             <button
               onClick={() => {
-                setIsEditProjectOpen(true);
+                setIsEditProjectOpen?.(true);
               }}
               className="flex items-center space-x-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
             >
@@ -321,7 +329,7 @@ export default function ProjectDetailModal() {
             </button>
 
             <button
-              onClick={closeProjectDetail}
+              onClick={() => closeProjectDetail?.()}
               className="text-xs font-semibold px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white transition"
             >
               Close

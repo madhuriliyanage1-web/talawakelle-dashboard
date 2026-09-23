@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useProject } from '../../context/ProjectContext';
 import {
   X,
@@ -11,9 +11,7 @@ import {
   Pencil,
   Trash2,
   Save,
-  ChevronRight,
   AlertTriangle,
-  CheckCircle2,
   Building2
 } from 'lucide-react';
 
@@ -42,7 +40,7 @@ const btnEdit =
 
 // ─── GNDs Tab ─────────────────────────────────────────────────────────────────
 function GndsTab() {
-  const { gnds, addGnd, updateGnd, deleteGnd, projects } = useProject();
+  const { gnds = [], addGnd = () => {}, updateGnd = () => {}, deleteGnd = () => {}, projects = [] } = useProject() || {};
 
   const emptyForm = { code: '', name: '', displayName: '', ceoOfficer: '', phone: '' };
   const [showAdd, setShowAdd]     = useState(false);
@@ -52,28 +50,29 @@ function GndsTab() {
   const [search, setSearch]       = useState('');
 
   const projectCountForGnd = (gndId) =>
-    projects.filter(p => p.gndId === gndId).length;
+    (projects || []).filter(p => p?.gndId === gndId).length;
 
-  const filtered = gnds.filter(g =>
-    g.name?.toLowerCase().includes(search.toLowerCase()) ||
-    g.code?.toLowerCase().includes(search.toLowerCase()) ||
-    g.ceoOfficer?.toLowerCase().includes(search.toLowerCase())
+  const filtered = (gnds || []).filter(g =>
+    (g?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (g?.code || '').toLowerCase().includes(search.toLowerCase()) ||
+    (g?.ceoOfficer || '').toLowerCase().includes(search.toLowerCase())
   );
 
   const handleAdd = () => {
-    if (!addForm.name.trim()) return;
-    addGnd(addForm);
+    if (!addForm?.name?.trim()) return;
+    addGnd?.(addForm);
     setAddForm(emptyForm);
     setShowAdd(false);
   };
 
   const startEdit = (g) => {
+    if (!g) return;
     setEditingId(g.id);
-    setEditForm({ code: g.code, name: g.name, displayName: g.displayName, ceoOfficer: g.ceoOfficer, phone: g.phone });
+    setEditForm({ code: g?.code || '', name: g?.name || '', displayName: g?.displayName || '', ceoOfficer: g?.ceoOfficer || '', phone: g?.phone || '' });
   };
 
   const saveEdit = (id) => {
-    updateGnd(id, editForm);
+    updateGnd?.(id, editForm);
     setEditingId(null);
   };
 
@@ -123,17 +122,17 @@ function GndsTab() {
           </thead>
           <tbody className="divide-y divide-slate-800/60">
             {filtered.map((g, idx) => (
-              <tr key={g.id} className="group hover:bg-slate-800/40 transition">
-                {editingId === g.id ? (
+              <tr key={g?.id || idx} className="group hover:bg-slate-800/40 transition">
+                {editingId === g?.id ? (
                   <>
                     <td className="py-2 pl-1 text-slate-500">{idx + 1}</td>
                     <td className="py-2 pr-1"><input className={inputCls} value={editForm.code} onChange={e => setEditForm(p => ({ ...p, code: e.target.value }))} /></td>
                     <td className="py-2 pr-1"><input className={inputCls} value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} /></td>
                     <td className="py-2 pr-1"><input className={inputCls} value={editForm.ceoOfficer} onChange={e => setEditForm(p => ({ ...p, ceoOfficer: e.target.value }))} /></td>
-                    <td className="py-2 text-center text-slate-400">{projectCountForGnd(g.id)}</td>
+                    <td className="py-2 text-center text-slate-400">{projectCountForGnd(g?.id)}</td>
                     <td className="py-2">
                       <div className="flex gap-1">
-                        <button onClick={() => saveEdit(g.id)} className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/20 transition"><Save className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => saveEdit(g?.id)} className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/20 transition"><Save className="w-3.5 h-3.5" /></button>
                         <button onClick={() => setEditingId(null)} className={btnEdit}><X className="w-3.5 h-3.5" /></button>
                       </div>
                     </td>
@@ -141,19 +140,19 @@ function GndsTab() {
                 ) : (
                   <>
                     <td className="py-2 pl-1 text-slate-500">{idx + 1}</td>
-                    <td className="py-2 pr-2"><span className="font-mono text-amber-400 text-[11px]">{g.code}</span></td>
-                    <td className="py-2 pr-2 text-slate-200 font-medium">{g.name}</td>
-                    <td className="py-2 pr-2 text-slate-400">{g.ceoOfficer || <span className="text-rose-400 italic">Unassigned</span>}</td>
+                    <td className="py-2 pr-2"><span className="font-mono text-amber-400 text-[11px]">{g?.code || ''}</span></td>
+                    <td className="py-2 pr-2 text-slate-200 font-medium">{g?.name || ''}</td>
+                    <td className="py-2 pr-2 text-slate-400">{g?.ceoOfficer || <span className="text-rose-400 italic">Unassigned</span>}</td>
                     <td className="py-2 text-center">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${projectCountForGnd(g.id) > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-500'}`}>
-                        {projectCountForGnd(g.id)}
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${projectCountForGnd(g?.id) > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-500'}`}>
+                        {projectCountForGnd(g?.id)}
                       </span>
                     </td>
                     <td className="py-2">
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
                         <button onClick={() => startEdit(g)} className={btnEdit}><Pencil className="w-3.5 h-3.5" /></button>
-                        {projectCountForGnd(g.id) === 0 && (
-                          <button onClick={() => deleteGnd(g.id)} className={btnDanger}><Trash2 className="w-3.5 h-3.5" /></button>
+                        {projectCountForGnd(g?.id) === 0 && (
+                          <button onClick={() => deleteGnd?.(g?.id)} className={btnDanger}><Trash2 className="w-3.5 h-3.5" /></button>
                         )}
                       </div>
                     </td>
@@ -178,20 +177,20 @@ function GndsTab() {
 
 // ─── Officers Tab ─────────────────────────────────────────────────────────────
 function OfficersTab() {
-  const { gnds, ceoOfficers, renameOfficer, removeOfficer, projects } = useProject();
+  const { gnds = [], ceoOfficers = [], renameOfficer = () => {}, removeOfficer = () => {}, projects = [] } = useProject() || {};
   const [editingOfficer, setEditingOfficer] = useState(null);
   const [editName, setEditName] = useState('');
   const [search, setSearch] = useState('');
 
-  const officerStats = ceoOfficers.map(name => {
-    const linkedGnds = gnds.filter(g => g.ceoOfficer?.trim() === name);
-    const projectCount = projects.filter(p => p.ceoOfficer?.trim() === name || p.responsibleOfficer?.trim() === name).length;
+  const officerStats = (ceoOfficers || []).map(name => {
+    const linkedGnds = (gnds || []).filter(g => g?.ceoOfficer?.trim() === name);
+    const projectCount = (projects || []).filter(p => p?.ceoOfficer?.trim() === name || p?.responsibleOfficer?.trim() === name).length;
     return { name, gndCount: linkedGnds.length, projectCount, gnds: linkedGnds };
   });
 
   const filtered = officerStats.filter(o =>
-    o.name.toLowerCase().includes(search.toLowerCase()) ||
-    o.gnds.some(g => g.name.toLowerCase().includes(search.toLowerCase()) || g.code.toLowerCase().includes(search.toLowerCase()))
+    (o?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (o?.gnds || []).some(g => (g?.name || '').toLowerCase().includes(search.toLowerCase()) || (g?.code || '').toLowerCase().includes(search.toLowerCase()))
   );
 
   const startEdit = (name) => {
@@ -201,7 +200,7 @@ function OfficersTab() {
 
   const saveEdit = (oldName) => {
     if (editName.trim() && editName.trim() !== oldName) {
-      renameOfficer(oldName, editName.trim());
+      renameOfficer?.(oldName, editName.trim());
     }
     setEditingOfficer(null);
   };
@@ -231,23 +230,23 @@ function OfficersTab() {
           </thead>
           <tbody className="divide-y divide-slate-800/60">
             {filtered.map((o, idx) => (
-              <tr key={o.name} className="hover:bg-slate-800/40 transition group">
+              <tr key={o?.name || idx} className="hover:bg-slate-800/40 transition group">
                 <td className="py-2 pl-1 text-slate-500">{idx + 1}</td>
-                {editingOfficer === o.name ? (
+                {editingOfficer === o?.name ? (
                   <>
                     <td className="py-2 pr-2" colSpan={2}>
                       <input
                         className={inputCls}
                         value={editName}
                         onChange={e => setEditName(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && saveEdit(o.name)}
+                        onKeyDown={e => e.key === 'Enter' && saveEdit(o?.name)}
                         autoFocus
                       />
                     </td>
-                    <td className="py-2 text-center text-slate-400">{o.projectCount}</td>
+                    <td className="py-2 text-center text-slate-400">{o?.projectCount || 0}</td>
                     <td className="py-2">
                       <div className="flex gap-1">
-                        <button onClick={() => saveEdit(o.name)} className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/20 transition">
+                        <button onClick={() => saveEdit(o?.name)} className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/20 transition">
                           <Save className="w-3.5 h-3.5" />
                         </button>
                         <button onClick={() => setEditingOfficer(null)} className={btnEdit}>
@@ -258,28 +257,28 @@ function OfficersTab() {
                   </>
                 ) : (
                   <>
-                    <td className="py-2 text-slate-200 font-medium">{o.name}</td>
+                    <td className="py-2 text-slate-200 font-medium">{o?.name}</td>
                     <td className="py-2 text-slate-400">
                       <div className="flex flex-wrap gap-1">
-                        {o.gnds.map(g => (
-                          <span key={g.id} className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-amber-400" title={g.name}>
-                            {g.code || g.name}
+                        {(o?.gnds || []).map(g => (
+                          <span key={g?.id} className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-amber-400" title={g?.name}>
+                            {g?.code || g?.name}
                           </span>
                         ))}
                       </div>
                     </td>
                     <td className="py-2 text-center">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${o.projectCount > 0 ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700 text-slate-500'}`}>
-                        {o.projectCount}
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${(o?.projectCount || 0) > 0 ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700 text-slate-500'}`}>
+                        {o?.projectCount || 0}
                       </span>
                     </td>
                     <td className="py-2 text-right">
                       <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition">
-                        <button onClick={() => startEdit(o.name)} className={btnEdit} title="Rename officer across all records">
+                        <button onClick={() => startEdit(o?.name)} className={btnEdit} title="Rename officer across all records">
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
-                        {o.projectCount === 0 && (
-                          <button onClick={() => removeOfficer(o.name)} className={btnDanger} title="Unassign officer from GNDs">
+                        {(o?.projectCount || 0) === 0 && (
+                          <button onClick={() => removeOfficer?.(o?.name)} className={btnDanger} title="Unassign officer from GNDs">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         )}
@@ -298,7 +297,7 @@ function OfficersTab() {
 
       <div className="bg-slate-800/30 border border-slate-800 rounded-lg px-3 py-2 flex items-center justify-between text-xs text-slate-400">
         <span>Active Community Empowerment Officers (CEOs)</span>
-        <span className="text-sm font-bold text-teal-400">{ceoOfficers.length}</span>
+        <span className="text-sm font-bold text-teal-400">{(ceoOfficers || []).length}</span>
       </div>
     </div>
   );
@@ -312,7 +311,7 @@ const PRESET_COLORS = [
 ];
 
 function CategoriesTab() {
-  const { categories, addCategory, updateCategory, deleteCategory, projects } = useProject();
+  const { categories = [], addCategory = () => {}, updateCategory = () => {}, deleteCategory = () => {}, projects = [] } = useProject() || {};
 
   const [showAdd, setShowAdd]     = useState(false);
   const [newName, setNewName]     = useState('');
@@ -322,24 +321,25 @@ function CategoriesTab() {
   const [editColor, setEditColor] = useState('');
 
   const projectCountForCat = (name) =>
-    projects.filter(p => p.category === name).length;
+    (projects || []).filter(p => p?.category === name).length;
 
   const handleAdd = () => {
-    if (!newName.trim()) return;
-    addCategory({ name: newName.trim(), color: newColor });
+    if (!newName?.trim()) return;
+    addCategory?.({ name: newName.trim(), color: newColor });
     setNewName('');
     setNewColor('#10b981');
     setShowAdd(false);
   };
 
   const startEdit = (c) => {
+    if (!c) return;
     setEditingId(c.id);
-    setEditName(c.name);
-    setEditColor(c.color || '#10b981');
+    setEditName(c?.name || '');
+    setEditColor(c?.color || '#10b981');
   };
 
   const saveEdit = (c) => {
-    updateCategory(c.id, { name: editName, color: editColor });
+    updateCategory?.(c?.id, { name: editName, color: editColor });
     setEditingId(null);
   };
 
@@ -385,9 +385,9 @@ function CategoriesTab() {
 
       {/* List */}
       <div className="overflow-y-auto flex-1 space-y-1.5 -mx-1 px-1">
-        {categories.map((c, idx) => (
-          <div key={c.id} className="group flex items-center gap-3 bg-slate-800/40 border border-slate-800 rounded-xl px-3 py-2.5 hover:border-slate-700 transition">
-            {editingId === c.id ? (
+        {(categories || []).map((c) => (
+          <div key={c?.id} className="group flex items-center gap-3 bg-slate-800/40 border border-slate-800 rounded-xl px-3 py-2.5 hover:border-slate-700 transition">
+            {editingId === c?.id ? (
               <>
                 <div className="relative">
                   <input type="color" value={editColor} onChange={e => setEditColor(e.target.value)}
@@ -411,17 +411,17 @@ function CategoriesTab() {
               </>
             ) : (
               <>
-                <span className="w-4 h-4 rounded-full flex-shrink-0" style={{ background: c.color || '#64748b' }} />
-                <span className="flex-1 text-xs text-slate-200 font-medium">{c.name}</span>
+                <span className="w-4 h-4 rounded-full flex-shrink-0" style={{ background: c?.color || '#64748b' }} />
+                <span className="flex-1 text-xs text-slate-200 font-medium">{c?.name || ''}</span>
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex-shrink-0 ${
-                  projectCountForCat(c.name) > 0 ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700 text-slate-500'
+                  projectCountForCat(c?.name) > 0 ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700 text-slate-500'
                 }`}>
-                  {projectCountForCat(c.name)} projects
+                  {projectCountForCat(c?.name)} projects
                 </span>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
                   <button onClick={() => startEdit(c)} className={btnEdit}><Pencil className="w-3.5 h-3.5" /></button>
-                  {projectCountForCat(c.name) === 0 && (
-                    <button onClick={() => deleteCategory(c.id)} className={btnDanger}><Trash2 className="w-3.5 h-3.5" /></button>
+                  {projectCountForCat(c?.name) === 0 && (
+                    <button onClick={() => deleteCategory?.(c?.id)} className={btnDanger}><Trash2 className="w-3.5 h-3.5" /></button>
                   )}
                 </div>
               </>
@@ -439,16 +439,16 @@ function CategoriesTab() {
 
 // ─── Financial Years Tab ──────────────────────────────────────────────────────
 function YearsTab() {
-  const { financialYears, addFinancialYear, deleteFinancialYear, projects } = useProject();
+  const { financialYears = [], addFinancialYear = () => {}, deleteFinancialYear = () => {}, projects = [] } = useProject() || {};
   const [newYear, setNewYear] = useState('');
 
   const projectCountForYear = (year) =>
-    projects.filter(p => String(p.year) === String(year)).length;
+    (projects || []).filter(p => String(p?.year || p?.financialYear || '') === String(year)).length;
 
   const handleAdd = () => {
-    const y = parseInt(newYear);
+    const y = parseInt(newYear, 10);
     if (isNaN(y) || y < 2000 || y > 2100) return;
-    addFinancialYear(y);
+    addFinancialYear?.(y);
     setNewYear('');
   };
 
@@ -473,7 +473,7 @@ function YearsTab() {
 
       {/* Year list */}
       <div className="overflow-y-auto flex-1 space-y-2 -mx-1 px-1">
-        {financialYears.map(year => {
+        {(financialYears || []).map(year => {
           const count = projectCountForYear(year);
           return (
             <div key={year} className="group flex items-center gap-3 bg-slate-800/40 border border-slate-800 rounded-xl px-4 py-3 hover:border-slate-700 transition">
@@ -486,7 +486,7 @@ function YearsTab() {
               </span>
               {count === 0 && (
                 <button
-                  onClick={() => deleteFinancialYear(year)}
+                  onClick={() => deleteFinancialYear?.(year)}
                   className={`${btnDanger} opacity-0 group-hover:opacity-100 transition`}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -495,7 +495,7 @@ function YearsTab() {
             </div>
           );
         })}
-        {financialYears.length === 0 && (
+        {(financialYears || []).length === 0 && (
           <p className="text-center text-slate-500 text-xs py-8">No financial years configured.</p>
         )}
       </div>
@@ -510,16 +510,16 @@ function YearsTab() {
 
 // ─── Main SettingsModal ───────────────────────────────────────────────────────
 export default function SettingsModal() {
-  const { isSettingsOpen, setIsSettingsOpen, gnds, ceoOfficers, categories, financialYears } = useProject();
+  const { isSettingsOpen = false, setIsSettingsOpen = () => {}, gnds = [], ceoOfficers = [], categories = [], financialYears = [] } = useProject() || {};
   const [activeTab, setActiveTab] = useState('gnds');
 
   if (!isSettingsOpen) return null;
 
   const counts = {
-    gnds: gnds.length,
-    officers: ceoOfficers.length,
-    categories: categories.length,
-    years: financialYears.length,
+    gnds: (gnds || []).length,
+    officers: (ceoOfficers || []).length,
+    categories: (categories || []).length,
+    years: (financialYears || []).length,
   };
 
   const tabContent = {
@@ -531,15 +531,15 @@ export default function SettingsModal() {
 
   return (
     <div
-      onClick={() => setIsSettingsOpen(false)}
+      onClick={() => setIsSettingsOpen?.(false)}
       className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5"
     >
       <div
-        onClick={e => e.stopPropagation()}
+        onClick={e => e?.stopPropagation?.()}
         className="relative w-full max-w-3xl bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl flex flex-col"
         style={{ maxHeight: '92vh' }}
       >
-        {/* ── Header ── */}
+        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg">
@@ -551,14 +551,14 @@ export default function SettingsModal() {
             </div>
           </div>
           <button
-            onClick={() => setIsSettingsOpen(false)}
+            onClick={() => setIsSettingsOpen?.(false)}
             className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* ── Tab bar ── */}
+        {/* Tab bar */}
         <div className="flex gap-1 px-4 pt-3 pb-0 border-b border-slate-800 flex-shrink-0 overflow-x-auto scrollbar-none">
           {TABS.map(tab => {
             const Icon = tab.icon;
@@ -580,28 +580,28 @@ export default function SettingsModal() {
                 <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ml-0.5 ${
                   isActive ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-700 text-slate-400'
                 }`}>
-                  {counts[tab.id]}
+                  {counts[tab.id] || 0}
                 </span>
               </button>
             );
           })}
         </div>
 
-        {/* ── Tab content ── */}
+        {/* Tab content */}
         <div className="flex-1 overflow-hidden p-5">
           <div className="h-full flex flex-col">
             {tabContent[activeTab]}
           </div>
         </div>
 
-        {/* ── Footer ── */}
+        {/* Footer */}
         <div className="px-5 py-3 border-t border-slate-800 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
             <Building2 className="w-3.5 h-3.5 text-slate-600" />
             Talawakelle Divisional Secretariat — Planning Branch
           </div>
           <button
-            onClick={() => setIsSettingsOpen(false)}
+            onClick={() => setIsSettingsOpen?.(false)}
             className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition"
           >
             Done
