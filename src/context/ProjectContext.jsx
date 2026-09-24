@@ -24,7 +24,8 @@ import {
   updateDoc,
   deleteDoc,
   getDocs,
-  writeBatch
+  writeBatch,
+  addDoc
 } from 'firebase/firestore';
 
 // ─── Internal Context Object ──────────────────────────────────────────────────
@@ -486,7 +487,8 @@ export function ProjectProvider({ children }) {
     try {
       const currentGnds = gndsRef.current;
       const currentProjects = projectsRef.current;
-      const newId = `PRJ-TLW-${projectData?.year || 2026}-${String(currentProjects.length + 1).padStart(3, '0')}`;
+      // Human-readable code kept for display; Firestore doc ID is auto-generated below.
+      const projectCode = `PRJ-TLW-${projectData?.year || 2026}-${String(currentProjects.length + 1).padStart(3, '0')}`;
       const targetGnd =
         currentGnds.find(g => g?.id === projectData?.gndId) || currentGnds[0] || {};
       const assignedCeo =
@@ -494,7 +496,8 @@ export function ProjectProvider({ children }) {
 
       const newProject = normalizeProjectRecord({
         ...projectData,
-        id: newId,
+        id: projectCode,           // temporary — overwritten after addDoc resolves
+        projectCode,               // human-readable label preserved
         gndId: targetGnd?.id || 'GND-01',
         gndName: targetGnd?.name || '',
         gndCode: targetGnd?.code || '',
@@ -508,7 +511,10 @@ export function ProjectProvider({ children }) {
         lastUpdated: new Date().toISOString().split('T')[0]
       }, currentProjects.length, currentGnds);
 
-      await setDoc(doc(db, 'projects', newProject.id), newProject);
+      // addDoc always creates a NEW document — no more overwriting existing projects.
+      const docRef = await addDoc(collection(db, 'projects'), newProject);
+      // Write the real Firestore ID back into the document so the app can reference it.
+      await updateDoc(docRef, { id: docRef.id });
       await setDoc(doc(db, 'settings', 'config'), { isDemoData: false }, { merge: true });
     } catch (err) {
       console.error('addProject error:', err);
