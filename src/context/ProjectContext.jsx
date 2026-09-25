@@ -34,9 +34,11 @@ const ProjectContext = createContext(null);
 // ─── Project Record Normalizer ────────────────────────────────────────────────
 const normalizeProjectRecord = (p, index = 0, gndsList = (INITIAL_GNDS || [])) => {
   const gndName = p?.gndName || p?.gnd || '';
-  const matchedGnd = (gndsList || []).find(g =>
-    isGndMatch({ ...p, gndName, gnd: gndName }, g, gndsList || [])
-  );
+  const matchedGnd =
+    (gndsList || []).find(g => g?.id && p?.gndId && (g.id === p.gndId || normalizeGndString(g.id) === normalizeGndString(p.gndId))) ||
+    (gndsList || []).find(g =>
+      isGndMatch({ ...p, gndName, gnd: gndName }, g, gndsList || [])
+    );
   const ceo =
     (matchedGnd ? matchedGnd.ceoOfficer : null) ||
     p?.ceoOfficer ||
@@ -62,7 +64,7 @@ const normalizeProjectRecord = (p, index = 0, gndsList = (INITIAL_GNDS || [])) =
     gndId: matchedGnd ? matchedGnd.id : (p?.gndId || `GND-${String(index + 1).padStart(2, '0')}`),
     gndName: matchedGnd ? matchedGnd.name : gndName,
     gndCode: matchedGnd ? matchedGnd.code : (p?.gndCode || ''),
-    gnd: gndName,
+    gnd: matchedGnd ? matchedGnd.name : gndName,
     category: p?.category || 'Rural Road Development',
     allocation: allocVal,
     expenditure: expVal,
@@ -526,13 +528,37 @@ export function ProjectProvider({ children }) {
     try {
       const current = projectsRef.current.find(p => p?.id === id);
       if (!current) return;
+
+      const currentGnds = gndsRef.current || [];
+      const selectedGndId = updatedFields?.gndId !== undefined ? updatedFields.gndId : current?.gndId;
+      const matchingGnd =
+        currentGnds.find(g => g?.id === selectedGndId) ||
+        currentGnds.find(g => normalizeGndString(g?.id) === normalizeGndString(selectedGndId));
+
+      const gndUpdates = matchingGnd
+        ? {
+            gndId: matchingGnd.id,
+            gndName: matchingGnd.name || '',
+            gndCode: matchingGnd.code || '',
+            gnd: matchingGnd.name || ''
+          }
+        : {};
+
       const updated = normalizeProjectRecord(
-        { ...current, ...updatedFields, lastUpdated: new Date().toISOString().split('T')[0] },
+        {
+          ...current,
+          ...updatedFields,
+          ...gndUpdates,
+          lastUpdated: new Date().toISOString().split('T')[0]
+        },
         0,
-        gndsRef.current
+        currentGnds
       );
       await setDoc(doc(db, 'projects', id), updated);
       await setDoc(doc(db, 'settings', 'config'), { isDemoData: false }, { merge: true });
+      if (selectedProject?.id === id) {
+        setSelectedProject(updated);
+      }
     } catch (err) {
       console.error('updateProject error:', err);
     }

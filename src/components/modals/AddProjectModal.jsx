@@ -27,6 +27,8 @@ export default function AddProjectModal() {
   const [formData, setFormData] = useState({
     name: '',
     gndId: defaultGnd?.id || '',
+    gndName: defaultGnd?.name || '',
+    gndCode: defaultGnd?.code || '',
     category: 'Rural Road Development',
     description: '',
     allocation: '',
@@ -49,6 +51,8 @@ export default function AddProjectModal() {
       setFormData({
         name: selectedProject?.name || selectedProject?.title || '',
         gndId: selectedProject?.gndId || (gnds || [])[0]?.id || '',
+        gndName: selectedProject?.gndName || (gnds || []).find(g => g?.id === selectedProject?.gndId)?.name || '',
+        gndCode: selectedProject?.gndCode || (gnds || []).find(g => g?.id === selectedProject?.gndId)?.code || '',
         category: selectedProject?.category || 'Rural Road Development',
         description: selectedProject?.description || '',
         allocation: selectedProject?.allocation ?? '',
@@ -70,6 +74,8 @@ export default function AddProjectModal() {
       setFormData({
         name: '',
         gndId: defGnd?.id || '',
+        gndName: defGnd?.name || '',
+        gndCode: defGnd?.code || '',
         category: 'Rural Road Development',
         description: '',
         allocation: '',
@@ -166,6 +172,8 @@ export default function AddProjectModal() {
                   setFormData(prev => ({
                     ...prev,
                     gndId: newGndId,
+                    gndName: chosenGnd?.name || prev.gndName || '',
+                    gndCode: chosenGnd?.code || prev.gndCode || '',
                     ceoOfficer: chosenGnd?.ceoOfficer || prev.ceoOfficer,
                     responsibleOfficer: chosenGnd?.ceoOfficer || prev.responsibleOfficer
                   }));
