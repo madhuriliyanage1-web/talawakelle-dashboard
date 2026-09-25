@@ -12,7 +12,10 @@ import {
   Trash2,
   Save,
   AlertTriangle,
-  Building2
+  Building2,
+  Phone,
+  Mail,
+  ExternalLink
 } from 'lucide-react';
 
 // ─── Tab definitions ─────────────────────────────────────────────────────────
@@ -177,44 +180,83 @@ function GndsTab() {
 
 // ─── Officers Tab ─────────────────────────────────────────────────────────────
 function OfficersTab() {
-  const { gnds = [], ceoOfficers = [], renameOfficer = () => {}, removeOfficer = () => {}, projects = [] } = useProject() || {};
+  const {
+    gnds = [],
+    ceoOfficers = [],
+    renameOfficer = () => {},
+    removeOfficer = () => {},
+    updateCeoOfficer = () => {},
+    getCeoContact = () => ({}),
+    openEditCeo = () => {},
+    setIsAddCeoOpen = () => {},
+    projects = []
+  } = useProject() || {};
+
   const [editingOfficer, setEditingOfficer] = useState(null);
   const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editGndId, setEditGndId] = useState('');
   const [search, setSearch] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const officerStats = (ceoOfficers || []).map(name => {
     const linkedGnds = (gnds || []).filter(g => g?.ceoOfficer?.trim() === name);
     const projectCount = (projects || []).filter(p => p?.ceoOfficer?.trim() === name || p?.responsibleOfficer?.trim() === name).length;
-    return { name, gndCount: linkedGnds.length, projectCount, gnds: linkedGnds };
+    const contact = getCeoContact?.(name) || {};
+    return { name, gndCount: linkedGnds.length, projectCount, gnds: linkedGnds, contact };
   });
 
   const filtered = officerStats.filter(o =>
     (o?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (o?.contact?.phone || '').toLowerCase().includes(search.toLowerCase()) ||
     (o?.gnds || []).some(g => (g?.name || '').toLowerCase().includes(search.toLowerCase()) || (g?.code || '').toLowerCase().includes(search.toLowerCase()))
   );
 
   const startEdit = (name) => {
+    const contact = getCeoContact?.(name) || {};
     setEditingOfficer(name);
     setEditName(name);
+    setEditPhone(contact?.phone || '+94 52 225 8234');
+    setEditEmail(contact?.email || '');
+    setEditGndId(contact?.gndId || '');
   };
 
-  const saveEdit = (oldName) => {
-    if (editName.trim() && editName.trim() !== oldName) {
-      renameOfficer?.(oldName, editName.trim());
+  const saveEdit = async (oldName) => {
+    if (!editName.trim()) return;
+    setIsSaving(true);
+    try {
+      await updateCeoOfficer?.({
+        oldName,
+        name: editName.trim(),
+        phone: editPhone.trim(),
+        email: editEmail.trim(),
+        gndId: editGndId
+      });
+      setEditingOfficer(null);
+    } finally {
+      setIsSaving(false);
     }
-    setEditingOfficer(null);
   };
 
   return (
     <div className="flex flex-col gap-3 h-full">
-      {/* Search + Info */}
+      {/* Search + Add / Manage CEO */}
       <div className="flex gap-2">
         <input
           className={`${inputCls} flex-1`}
-          placeholder="Search officer or assigned GND..."
+          placeholder="Search officer name, phone or assigned GND..."
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
+        <button
+          onClick={() => setIsAddCeoOpen?.(true)}
+          className={btnPrimary}
+          title="Open CEO Manager to register new or update existing"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>+ CEO Manager</span>
+        </button>
       </div>
 
       <div className="overflow-y-auto flex-1 -mx-1 px-1">
@@ -223,48 +265,109 @@ function OfficersTab() {
             <tr className="text-slate-500 text-left border-b border-slate-800">
               <th className="pb-2 pl-1 font-semibold w-8">#</th>
               <th className="pb-2 font-semibold">Officer Name</th>
+              <th className="pb-2 font-semibold">Contact Phone</th>
               <th className="pb-2 font-semibold">Assigned GND(s)</th>
               <th className="pb-2 font-semibold text-center w-16">Projects</th>
-              <th className="pb-2 w-16"></th>
+              <th className="pb-2 w-20 text-right pr-1">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/60">
             {filtered.map((o, idx) => (
-              <tr key={o?.name || idx} className="hover:bg-slate-800/40 transition group">
-                <td className="py-2 pl-1 text-slate-500">{idx + 1}</td>
+              <React.Fragment key={o?.name || idx}>
                 {editingOfficer === o?.name ? (
-                  <>
-                    <td className="py-2 pr-2" colSpan={2}>
-                      <input
-                        className={inputCls}
-                        value={editName}
-                        onChange={e => setEditName(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && saveEdit(o?.name)}
-                        autoFocus
-                      />
+                  <tr className="bg-slate-850 border-y border-amber-500/40">
+                    <td className="py-3 pl-2 text-slate-500 font-mono align-top">{idx + 1}</td>
+                    <td className="py-2.5 pr-2 align-top">
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-slate-400 font-semibold block">Full Name</label>
+                        <input
+                          className={inputCls}
+                          value={editName}
+                          onChange={e => setEditName(e.target.value)}
+                          placeholder="Officer Name"
+                          autoFocus
+                        />
+                      </div>
                     </td>
-                    <td className="py-2 text-center text-slate-400">{o?.projectCount || 0}</td>
-                    <td className="py-2">
-                      <div className="flex gap-1">
-                        <button onClick={() => saveEdit(o?.name)} className="p-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/20 transition">
+                    <td className="py-2.5 pr-2 align-top">
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-amber-400 font-semibold block flex items-center gap-1">
+                          <Phone className="w-3 h-3" /> Phone Number *
+                        </label>
+                        <input
+                          className={`${inputCls} font-mono`}
+                          value={editPhone}
+                          onChange={e => setEditPhone(e.target.value)}
+                          placeholder="+94 77 123 4567"
+                        />
+                      </div>
+                    </td>
+                    <td className="py-2.5 pr-2 align-top">
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-slate-400 font-semibold block">Map to GND</label>
+                        <select
+                          className={inputCls}
+                          value={editGndId}
+                          onChange={e => setEditGndId(e.target.value)}
+                        >
+                          <option value="">-- Keep Current / Standalone --</option>
+                          {(gnds || []).map(g => (
+                            <option key={g.id} value={g.id}>
+                              {g.code ? `[${g.code}] ` : ''}{g.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </td>
+                    <td className="py-2.5 text-center text-slate-400 font-bold align-middle">{o?.projectCount || 0}</td>
+                    <td className="py-2.5 pr-1 text-right align-middle">
+                      <div className="flex gap-1 justify-end">
+                        <button
+                          onClick={() => saveEdit(o?.name)}
+                          disabled={isSaving}
+                          className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 transition disabled:opacity-50"
+                          title="Save Officer & Phone"
+                        >
                           <Save className="w-3.5 h-3.5" />
                         </button>
-                        <button onClick={() => setEditingOfficer(null)} className={btnEdit}>
+                        <button
+                          onClick={() => setEditingOfficer(null)}
+                          className={btnEdit}
+                          title="Cancel"
+                        >
                           <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
-                  </>
+                  </tr>
                 ) : (
-                  <>
-                    <td className="py-2 text-slate-200 font-medium">{o?.name}</td>
+                  <tr className="hover:bg-slate-800/40 transition group">
+                    <td className="py-2 pl-1 text-slate-500">{idx + 1}</td>
+                    <td className="py-2 text-slate-200 font-medium">
+                      <div>
+                        <span>{o?.name}</span>
+                        {o?.contact?.designation && o.contact.designation !== 'Community Empowerment Officer (CEO)' && (
+                          <span className="block text-[10px] text-slate-500">{o.contact.designation}</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-2 text-slate-300">
+                      <div className="flex items-center gap-1.5 font-mono text-[11px] text-teal-300 bg-teal-950/40 px-2 py-0.5 rounded-md border border-teal-800/40 w-fit">
+                        <Phone className="w-3 h-3 text-teal-400 flex-shrink-0" />
+                        <span>{o?.contact?.phone || '+94 52 225 8234'}</span>
+                      </div>
+                    </td>
                     <td className="py-2 text-slate-400">
                       <div className="flex flex-wrap gap-1">
-                        {(o?.gnds || []).map(g => (
-                          <span key={g?.id} className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-amber-400" title={g?.name}>
-                            {g?.code || g?.name}
-                          </span>
-                        ))}
+                        {(o?.gnds || []).length > 0 ? (
+                          (o?.gnds || []).map(g => (
+                            <span key={g?.id} className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-amber-400" title={g?.name}>
+                              {g?.code || g?.name}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-[10px] text-slate-500 italic">Unassigned Pool</span>
+                        )}
                       </div>
                     </td>
                     <td className="py-2 text-center">
@@ -272,21 +375,36 @@ function OfficersTab() {
                         {o?.projectCount || 0}
                       </span>
                     </td>
-                    <td className="py-2 text-right">
+                    <td className="py-2 text-right pr-1">
                       <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition">
-                        <button onClick={() => startEdit(o?.name)} className={btnEdit} title="Rename officer across all records">
+                        <button
+                          onClick={() => startEdit(o?.name)}
+                          className="p-1.5 rounded-lg text-amber-400 hover:bg-amber-500/20 transition"
+                          title="Quick edit officer & phone number"
+                        >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
+                        <button
+                          onClick={() => openEditCeo?.(o?.name)}
+                          className={btnEdit}
+                          title="Open in CEO Manager modal"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5 text-teal-400" />
+                        </button>
                         {(o?.projectCount || 0) === 0 && (
-                          <button onClick={() => removeOfficer?.(o?.name)} className={btnDanger} title="Unassign officer from GNDs">
+                          <button
+                            onClick={() => removeOfficer?.(o?.name)}
+                            className={btnDanger}
+                            title="Unassign / remove officer"
+                          >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         )}
                       </div>
                     </td>
-                  </>
+                  </tr>
                 )}
-              </tr>
+              </React.Fragment>
             ))}
           </tbody>
         </table>
@@ -296,8 +414,14 @@ function OfficersTab() {
       </div>
 
       <div className="bg-slate-800/30 border border-slate-800 rounded-lg px-3 py-2 flex items-center justify-between text-xs text-slate-400">
-        <span>Active Community Empowerment Officers (CEOs)</span>
-        <span className="text-sm font-bold text-teal-400">{(ceoOfficers || []).length}</span>
+        <span className="flex items-center gap-1.5">
+          <UserCheck className="w-3.5 h-3.5 text-teal-400" />
+          <span>Active Community Empowerment Officers (CEOs)</span>
+        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] text-slate-500">Click pencil to edit contact phone number directly</span>
+          <span className="text-sm font-bold text-teal-400">{(ceoOfficers || []).length}</span>
+        </div>
       </div>
     </div>
   );

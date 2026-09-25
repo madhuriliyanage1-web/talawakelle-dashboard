@@ -14,7 +14,8 @@ import {
   Camera,
   Plus,
   Sliders,
-  Edit2
+  Edit2,
+  Phone
 } from 'lucide-react';
 
 export default function ProjectDetailModal() {
@@ -29,7 +30,8 @@ export default function ProjectDetailModal() {
     setIsEditProjectOpen = () => {},
     setIsAddEvidenceOpen = () => {},
     setEvidenceTargetProjectId = () => {},
-    getProjectAlerts = () => []
+    getProjectAlerts = () => [],
+    getCeoContact = () => ({})
   } = useProject() || {};
 
   if (!isDetailOpen || !selectedProject) return null;
@@ -69,6 +71,7 @@ export default function ProjectDetailModal() {
   const pPhys = Number(selectedProject?.physicalProgress ?? selectedProject?.progress ?? 0);
   const pFin = Number(selectedProject?.financialProgress ?? 0);
   const pOfficer = selectedProject?.ceoOfficer || selectedProject?.responsibleOfficer || 'Unassigned';
+  const officerContact = getCeoContact?.(pOfficer) || {};
 
   return (
     <div
@@ -233,6 +236,16 @@ export default function ProjectDetailModal() {
               <span className="font-semibold text-slate-200">
                 {pOfficer}
               </span>
+              {officerContact?.phone && (
+                <a
+                  href={`tel:${officerContact.phone.replace(/[^0-9+]/g, '')}`}
+                  className="flex items-center gap-1 text-[11px] text-teal-400 hover:text-teal-300 font-mono mt-0.5"
+                  title="Call Officer"
+                >
+                  <Phone className="w-3 h-3 text-teal-400" />
+                  <span>{officerContact.phone}</span>
+                </a>
+              )}
             </div>
           </div>
 

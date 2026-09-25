@@ -753,11 +753,124 @@ export function ProjectProvider({ children }) {
       await batch.commit();
 
       const newCeos = customCeosRef.current.filter(c => c !== trimmed);
-      await updateDoc(doc(db, 'settings', 'config'), { customCeos: newCeos, isDemoData: false });
+      const currentDir = { ...ceoDirectoryRef.current };
+      delete currentDir[trimmed];
+      await updateDoc(doc(db, 'settings', 'config'), { customCeos: newCeos, ceoDirectory: currentDir, isDemoData: false });
     } catch (err) {
       console.error('removeOfficer error:', err);
     }
   };
+
+  const updateCeoOfficer = async ({ oldName, name, phone, email, designation, gndId }) => {
+    if (!oldName && !name) return false;
+    try {
+      const trimmedOld = (oldName || name).trim();
+      const trimmedNew = (name || oldName).trim();
+      const trimmedPhone = phone !== undefined ? phone.trim() : '';
+      const trimmedEmail = email !== undefined ? email.trim() : '';
+      const trimmedDesignation = designation !== undefined ? designation.trim() : 'Community Empowerment Officer (CEO)';
+      const batch = writeBatch(db);
+
+      // 1. If name changed, rename across GNDs and Projects
+      if (trimmedNew !== trimmedOld) {
+        gndsRef.current
+          .filter(g => g?.ceoOfficer?.trim() === trimmedOld)
+          .forEach(g => {
+            const updates = { ceoOfficer: trimmedNew };
+            if (trimmedPhone) updates.phone = trimmedPhone;
+            batch.update(doc(db, 'gnds', g.id), updates);
+          });
+
+        projectsRef.current.forEach(p => {
+          const updates = {};
+          if (p?.ceoOfficer?.trim() === trimmedOld) updates.ceoOfficer = trimmedNew;
+          if (p?.responsibleOfficer?.trim() === trimmedOld) updates.responsibleOfficer = trimmedNew;
+          if (Object.keys(updates).length > 0) {
+            batch.update(doc(db, 'projects', p.id), updates);
+          }
+        });
+      } else if (trimmedPhone) {
+        // Same name: update phone on all GNDs currently mapped to this officer
+        gndsRef.current
+          .filter(g => g?.ceoOfficer?.trim() === trimmedOld)
+          .forEach(g => {
+            batch.update(doc(db, 'gnds', g.id), { phone: trimmedPhone });
+          });
+      }
+
+      // 2. Handle GND assignment change if specified
+      if (gndId && gndId !== 'none' && gndId !== 'all') {
+        const targetGnd = (gndsRef.current || []).find(g => g.id === gndId);
+        if (targetGnd) {
+          batch.update(doc(db, 'gnds', gndId), {
+            ceoOfficer: trimmedNew,
+            ...(trimmedPhone ? { phone: trimmedPhone } : {})
+          });
+        }
+      }
+
+      await batch.commit();
+
+      // 3. Update settings config (customCeos & ceoDirectory)
+      const currentCeos = customCeosRef.current || [];
+      const currentDir = { ...(ceoDirectoryRef.current || {}) };
+
+      let newCeos = [...currentCeos];
+      if (trimmedNew !== trimmedOld) {
+        newCeos = newCeos.map(c => c === trimmedOld ? trimmedNew : c);
+      }
+      if (!newCeos.includes(trimmedNew)) {
+        newCeos.push(trimmedNew);
+      }
+      newCeos.sort();
+
+      const existingRecord = currentDir[trimmedOld] || {};
+      if (trimmedNew !== trimmedOld) {
+        delete currentDir[trimmedOld];
+      }
+
+      currentDir[trimmedNew] = {
+        ...existingRecord,
+        name: trimmedNew,
+        phone: trimmedPhone !== undefined && trimmedPhone !== '' ? trimmedPhone : (existingRecord.phone || ''),
+        email: trimmedEmail !== undefined ? trimmedEmail : (existingRecord.email || ''),
+        designation: trimmedDesignation || existingRecord.designation || 'Community Empowerment Officer (CEO)',
+        gndId: gndId !== undefined ? gndId : (existingRecord.gndId || '')
+      };
+
+      await updateDoc(doc(db, 'settings', 'config'), {
+        customCeos: newCeos,
+        ceoDirectory: currentDir,
+        isDemoData: false
+      });
+
+      // Update local state immediately
+      setCeoDirectory(currentDir);
+      setCustomCeos(newCeos);
+
+      return true;
+    } catch (err) {
+      console.error('updateCeoOfficer error:', err);
+      return false;
+    }
+  };
+
+  const getCeoContact = useCallback((officerName) => {
+    if (!officerName) return { name: '', phone: '', email: '', designation: 'Community Empowerment Officer (CEO)', gndId: '', gndName: '' };
+    const trimmed = String(officerName).trim();
+    const fromDir = (ceoDirectoryRef.current || {})[trimmed] || {};
+    const linkedGnd = (gndsRef.current || []).find(g => g?.ceoOfficer?.trim() === trimmed);
+    const assignedGndId = fromDir.gndId || linkedGnd?.id || '';
+    const assignedGnd = (gndsRef.current || []).find(g => g.id === assignedGndId) || linkedGnd;
+    return {
+      name: trimmed,
+      phone: fromDir.phone || linkedGnd?.phone || '+94 52 225 8234',
+      email: fromDir.email || '',
+      designation: fromDir.designation || 'Community Empowerment Officer (CEO)',
+      gndId: assignedGndId,
+      gndName: assignedGnd?.name || (assignedGnd?.code ? `${assignedGnd.code} ${assignedGnd.name || ''}` : '')
+    };
+  }, []);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CRUD — Category
@@ -934,10 +1047,16 @@ export function ProjectProvider({ children }) {
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
   const [isAddGndOpen, setIsAddGndOpen] = useState(false);
   const [isAddCeoOpen, setIsAddCeoOpen] = useState(false);
+  const [editingCeo, setEditingCeo] = useState(null);
   const [isQuickUpdateOpen, setIsQuickUpdateOpen] = useState(false);
   const [isAddEvidenceOpen, setIsAddEvidenceOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [evidenceTargetProjectId, setEvidenceTargetProjectId] = useState(null);
+
+  const openEditCeo = (officerName) => {
+    setEditingCeo(officerName || null);
+    setIsAddCeoOpen(true);
+  };
 
   const openProjectDetail = (proj) => {
     if (proj) {
@@ -1000,8 +1119,10 @@ export function ProjectProvider({ children }) {
     deleteGnd,
     // CEO / Officer CRUD
     addCeoOfficer,
+    updateCeoOfficer,
     renameOfficer,
     removeOfficer,
+    getCeoContact,
     // Category CRUD
     addCategory,
     updateCategory,
@@ -1032,6 +1153,9 @@ export function ProjectProvider({ children }) {
     setIsAddGndOpen,
     isAddCeoOpen,
     setIsAddCeoOpen,
+    editingCeo,
+    setEditingCeo,
+    openEditCeo,
     isQuickUpdateOpen,
     setIsQuickUpdateOpen,
     isAddEvidenceOpen,
@@ -1100,8 +1224,10 @@ export function useProject() {
       updateGnd: async () => {},
       deleteGnd: async () => {},
       addCeoOfficer: async () => null,
+      updateCeoOfficer: async () => false,
       renameOfficer: async () => {},
       removeOfficer: async () => {},
+      getCeoContact: () => ({ name: '', phone: '', email: '', designation: '', gndId: '', gndName: '' }),
       addCategory: async () => {},
       updateCategory: async () => {},
       deleteCategory: async () => {},
@@ -1122,6 +1248,8 @@ export function useProject() {
       isAddCategoryOpen: false, setIsAddCategoryOpen: () => {},
       isAddGndOpen: false, setIsAddGndOpen: () => {},
       isAddCeoOpen: false, setIsAddCeoOpen: () => {},
+      editingCeo: null, setEditingCeo: () => {},
+      openEditCeo: () => {},
       isQuickUpdateOpen: false, setIsQuickUpdateOpen: () => {},
       isAddEvidenceOpen: false, setIsAddEvidenceOpen: () => {},
       isSettingsOpen: false, setIsSettingsOpen: () => {},
