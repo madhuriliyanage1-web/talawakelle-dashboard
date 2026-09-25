@@ -169,14 +169,32 @@ export default function AddProjectModal() {
                 onChange={(e) => {
                   const newGndId = e.target.value;
                   const chosenGnd = (gnds || []).find(x => x?.id === newGndId);
-                  setFormData(prev => ({
-                    ...prev,
-                    gndId: newGndId,
-                    gndName: chosenGnd?.name || prev.gndName || '',
-                    gndCode: chosenGnd?.code || prev.gndCode || '',
-                    ceoOfficer: chosenGnd?.ceoOfficer || prev.ceoOfficer,
-                    responsibleOfficer: chosenGnd?.ceoOfficer || prev.responsibleOfficer
-                  }));
+                  setFormData(prev => {
+                    // Replace old GND name/code references in description with new GND name
+                    let updatedDescription = prev.description || '';
+                    const oldGndName = prev.gndName || '';
+                    const oldGndCode = prev.gndCode || '';
+                    const newGndName = chosenGnd?.name || oldGndName;
+                    if (newGndName && newGndName !== oldGndName) {
+                      // Replace exact old GND name
+                      if (oldGndName) {
+                        updatedDescription = updatedDescription.split(oldGndName).join(newGndName);
+                      }
+                      // Also replace old GND code if it appears standalone
+                      if (oldGndCode && oldGndCode !== oldGndName) {
+                        updatedDescription = updatedDescription.split(oldGndCode).join(chosenGnd?.code || oldGndCode);
+                      }
+                    }
+                    return {
+                      ...prev,
+                      gndId: newGndId,
+                      gndName: newGndName,
+                      gndCode: chosenGnd?.code || prev.gndCode || '',
+                      description: updatedDescription,
+                      ceoOfficer: chosenGnd?.ceoOfficer || prev.ceoOfficer,
+                      responsibleOfficer: chosenGnd?.ceoOfficer || prev.responsibleOfficer
+                    };
+                  });
                 }}
                 className="w-full p-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white focus:ring-1 focus:ring-emerald-500"
               >
