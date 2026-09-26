@@ -80,6 +80,22 @@ const normalizeProjectRecord = (p, index = 0, gndsList = (INITIAL_GNDS || [])) =
     expectedCompletionDate: p?.expectedCompletionDate || '2026-12-31',
     approvalDate: p?.approvalDate || '2026-01-15',
     provisionDate: p?.provisionDate || '2026-02-01',
+    // Beneficiary Metrics (Optional, default 0)
+    directBeneficiaries: Math.max(0, parseInt(p?.directBeneficiaries ?? p?.directBeneficiariesCount ?? 0, 10) || 0),
+    directBeneficiariesCount: Math.max(0, parseInt(p?.directBeneficiaries ?? p?.directBeneficiariesCount ?? 0, 10) || 0),
+    indirectBeneficiaries: Math.max(0, parseInt(p?.indirectBeneficiaries ?? p?.indirectBeneficiariesCount ?? 0, 10) || 0),
+    indirectBeneficiariesCount: Math.max(0, parseInt(p?.indirectBeneficiaries ?? p?.indirectBeneficiariesCount ?? 0, 10) || 0),
+    // Verification & Quality Control Dates (Optional)
+    physicalCompletionDate: p?.physicalCompletionDate || '',
+    coreCuttingDate: p?.coreCuttingDate || p?.coreCuttingTestDate || '',
+    coreCuttingTestDate: p?.coreCuttingTestDate || p?.coreCuttingDate || '',
+    hammerTestDate: p?.hammerTestDate || '',
+    // Handover & Closure (Optional)
+    handoverDate: p?.handoverDate || p?.handoverMaintenanceDate || '',
+    handoverMaintenanceDate: p?.handoverMaintenanceDate || p?.handoverDate || '',
+    handoverParty: p?.handoverParty || p?.handoverAgency || '',
+    handoverAgency: p?.handoverAgency || p?.handoverParty || '',
+    retentionReleaseDate: p?.retentionReleaseDate || '',
     evidence: p?.evidence || [],
     remarks: p?.remarks || '',
     issues: p?.issues || { hasIssue: false, description: '', escalationLevel: 'Normal' },

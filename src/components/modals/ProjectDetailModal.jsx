@@ -15,7 +15,9 @@ import {
   Plus,
   Sliders,
   Edit2,
-  Phone
+  Phone,
+  Users,
+  ShieldCheck
 } from 'lucide-react';
 
 export default function ProjectDetailModal() {
@@ -248,6 +250,100 @@ export default function ProjectDetailModal() {
               )}
             </div>
           </div>
+
+          {/* Beneficiaries Section (if recorded) */}
+          {(Number(selectedProject?.directBeneficiaries || 0) > 0 || Number(selectedProject?.indirectBeneficiaries || 0) > 0) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="p-3.5 rounded-2xl bg-slate-800/40 border border-slate-700/60 flex items-center space-x-3">
+                <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <Users className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Direct Beneficiaries</span>
+                  <p className="text-base font-black text-white font-mono">
+                    {Number(selectedProject?.directBeneficiaries || 0).toLocaleString()}
+                  </p>
+                  <p className="text-[10px] text-slate-500">Directly serviced residents or families</p>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-slate-800/40 border border-slate-700/60 flex items-center space-x-3">
+                <div className="p-2.5 rounded-xl bg-teal-500/10 text-teal-400 border border-teal-500/20">
+                  <Users className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Indirect Beneficiaries</span>
+                  <p className="text-base font-black text-white font-mono">
+                    {Number(selectedProject?.indirectBeneficiaries || 0).toLocaleString()}
+                  </p>
+                  <p className="text-[10px] text-slate-500">Broader community & commuter reach</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Quality Control & Handover Details (if recorded) */}
+          {(selectedProject?.physicalCompletionDate ||
+            selectedProject?.coreCuttingDate ||
+            selectedProject?.coreCuttingTestDate ||
+            selectedProject?.hammerTestDate ||
+            selectedProject?.handoverDate ||
+            selectedProject?.handoverMaintenanceDate ||
+            selectedProject?.handoverParty ||
+            selectedProject?.handoverAgency ||
+            selectedProject?.retentionReleaseDate) && (
+            <div className="p-4 rounded-2xl bg-slate-800/30 border border-slate-700/60 space-y-3 text-xs">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-teal-400 flex items-center space-x-1.5">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Verification, Quality Testing & Handover</span>
+              </h3>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {selectedProject?.physicalCompletionDate && (
+                  <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <span className="text-slate-400 text-[10px] uppercase block font-semibold">Physical Completion Date</span>
+                    <span className="font-mono text-slate-200">{selectedProject.physicalCompletionDate}</span>
+                  </div>
+                )}
+                {(selectedProject?.coreCuttingDate || selectedProject?.coreCuttingTestDate) && (
+                  <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <span className="text-slate-400 text-[10px] uppercase block font-semibold">Core Cutting Test Date</span>
+                    <span className="font-mono text-emerald-300">
+                      {selectedProject?.coreCuttingDate || selectedProject?.coreCuttingTestDate}
+                    </span>
+                  </div>
+                )}
+                {selectedProject?.hammerTestDate && (
+                  <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <span className="text-slate-400 text-[10px] uppercase block font-semibold">Hammer Test Date</span>
+                    <span className="font-mono text-cyan-300">{selectedProject.hammerTestDate}</span>
+                  </div>
+                )}
+                {(selectedProject?.handoverDate || selectedProject?.handoverMaintenanceDate) && (
+                  <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <span className="text-slate-400 text-[10px] uppercase block font-semibold">Handover to Maintenance</span>
+                    <span className="font-mono text-amber-300">
+                      {selectedProject?.handoverDate || selectedProject?.handoverMaintenanceDate}
+                    </span>
+                  </div>
+                )}
+                {(selectedProject?.handoverParty || selectedProject?.handoverAgency) && (
+                  <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <span className="text-slate-400 text-[10px] uppercase block font-semibold">Handover Agency / Party</span>
+                    <span className="text-slate-200 font-semibold">
+                      {selectedProject?.handoverParty || selectedProject?.handoverAgency}
+                    </span>
+                  </div>
+                )}
+                {selectedProject?.retentionReleaseDate && (
+                  <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800">
+                    <span className="text-slate-400 text-[10px] uppercase block font-semibold">Retention Release Date</span>
+                    <span className="font-mono text-purple-300">{selectedProject.retentionReleaseDate}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Photographic Sequence */}
           <div className="space-y-3">
