@@ -31,6 +31,56 @@ import {
 // ─── Internal Context Object ──────────────────────────────────────────────────
 const ProjectContext = createContext(null);
 
+// ─── Date Parsing & Delay Check Helper ───────────────────────────────────────
+export const parseLocalDate = (dateStr) => {
+  if (!dateStr) return null;
+  if (dateStr instanceof Date) return dateStr;
+  const parts = String(dateStr).split('T')[0].split('-');
+  if (parts.length === 3) {
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const d = parseInt(parts[2], 10);
+    if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+      return new Date(y, m, d);
+    }
+  }
+  const parsed = new Date(dateStr);
+  return isNaN(parsed.getTime()) ? null : parsed;
+};
+
+export const getTodayMidnight = (refDate = new Date()) => {
+  const d = refDate instanceof Date ? refDate : new Date(refDate);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+};
+
+/**
+ * Project delay tracking criteria:
+ * Flagged as DELAYED / FLAGGED if:
+ * 1. Current date is past targetCompletionDate, AND
+ * 2. The physicalCompletionDate is missing (or status is not Completed / physical progress < 100%).
+ */
+export const isProjectDelayedOrFlagged = (project, currentDate = new Date()) => {
+  if (!project) return false;
+  const targetCompStr = project?.targetCompletionDate || project?.expectedCompletionDate || '';
+  if (!targetCompStr) return false;
+
+  const compDate = parseLocalDate(targetCompStr);
+  if (!compDate) return false;
+
+  const today = getTodayMidnight(currentDate);
+  const isPastTarget = today > compDate;
+  if (!isPastTarget) return false;
+
+  const pStatus = project?.status || project?.stage || '';
+  const pPhys = Number(project?.physicalProgress ?? project?.progress ?? 0) || 0;
+  const hasPhysDate = Boolean(project?.physicalCompletionDate && String(project.physicalCompletionDate).trim());
+  const isStatusCompleted = ['Completed', 'Bill Submitted', 'Bill Paid'].includes(pStatus);
+  const isPhysicalComplete = pPhys >= 100;
+
+  // Condition 2: physicalCompletionDate is missing (or status is not Completed / physical progress < 100%)
+  return !hasPhysDate || !isStatusCompleted || !isPhysicalComplete;
+};
+
 // ─── Project Record Normalizer ────────────────────────────────────────────────
 const normalizeProjectRecord = (p, index = 0, gndsList = (INITIAL_GNDS || [])) => {
   const gndName = p?.gndName || p?.gnd || '';
@@ -53,6 +103,7 @@ const normalizeProjectRecord = (p, index = 0, gndsList = (INITIAL_GNDS || [])) =
   const finProgressVal =
     Number(p?.financialProgress ?? (allocVal > 0 ? Math.round((expVal / allocVal) * 100) : 0)) || 0;
   const yearVal = String(p?.financialYear || p?.year || '2026');
+  const targetCompVal = p?.targetCompletionDate || p?.expectedCompletionDate || '2026-12-31';
 
   return {
     ...p,
@@ -77,7 +128,8 @@ const normalizeProjectRecord = (p, index = 0, gndsList = (INITIAL_GNDS || [])) =
     responsibleOfficer: ceo,
     financialYear: yearVal,
     year: yearVal,
-    expectedCompletionDate: p?.expectedCompletionDate || '2026-12-31',
+    targetCompletionDate: targetCompVal,
+    expectedCompletionDate: targetCompVal,
     approvalDate: p?.approvalDate || '2026-01-15',
     provisionDate: p?.provisionDate || '2026-02-01',
     // Beneficiary Metrics (Optional, default 0)
@@ -302,7 +354,7 @@ export function ProjectProvider({ children }) {
   const getProjectAlerts = (project) => {
     if (!project) return [];
     const alerts = [];
-    const today = new Date('2026-09-13');
+    const today = getTodayMidnight();
     const pStatus = project?.status || project?.stage || '';
     const pPhys = Number(project?.physicalProgress ?? project?.progress ?? 0) || 0;
     const pFin = Number(project?.financialProgress ?? 0) || 0;
@@ -324,17 +376,48 @@ export function ProjectProvider({ children }) {
       });
     }
 
-    if (project?.expectedCompletionDate) {
-      const compDate = new Date(project.expectedCompletionDate);
-      if (today > compDate && !['Completed', 'Bill Submitted', 'Bill Paid'].includes(pStatus)) {
-        const daysOver = Math.round((today - compDate) / (1000 * 60 * 60 * 24));
-        alerts.push({
-          type: 'COMPLETION_DATE_PASSED',
-          label: `Target Date Exceeded (${daysOver}d overdue)`, severity: 'urgent',
-          badge: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
-          description: `Scheduled target completion date (${project.expectedCompletionDate}) has elapsed.`
-        });
+    // ── Target Completion & Physical Completion Delay Tracking Rule ───────────
+    // Flagged as DELAYED if:
+    // 1. Current date is past targetCompletionDate, AND
+    // 2. physicalCompletionDate is missing (or status is not Completed / physical progress < 100%)
+    const targetCompStr = project?.targetCompletionDate || project?.expectedCompletionDate || '';
+    if (targetCompStr) {
+      const compDate = parseLocalDate(targetCompStr);
+      if (compDate && today > compDate) {
+        const hasPhysDate = Boolean(project?.physicalCompletionDate && String(project.physicalCompletionDate).trim());
+        const isStatusCompleted = ['Completed', 'Bill Submitted', 'Bill Paid'].includes(pStatus);
+        const isPhysicalComplete = pPhys >= 100;
+
+        if (!hasPhysDate || !isStatusCompleted || !isPhysicalComplete) {
+          const daysOver = Math.max(1, Math.round((today - compDate) / (1000 * 60 * 60 * 24)));
+          let desc = `Scheduled target completion date (${targetCompStr}) has elapsed (${daysOver}d overdue).`;
+          if (!hasPhysDate && (!isStatusCompleted || !isPhysicalComplete)) {
+            desc = `Target completion date (${targetCompStr}) elapsed by ${daysOver} days. Physical completion date is unrecorded and physical work is incomplete (${pPhys}%).`;
+          } else if (!hasPhysDate) {
+            desc = `Target completion date (${targetCompStr}) elapsed by ${daysOver} days. Physical completion date has not been recorded/verified.`;
+          } else if (!isStatusCompleted || !isPhysicalComplete) {
+            desc = `Target completion date (${targetCompStr}) elapsed by ${daysOver} days. Physical progress is ${pPhys}% with stage "${pStatus}".`;
+          }
+
+          alerts.push({
+            type: 'COMPLETION_DATE_PASSED',
+            label: `Target Date Exceeded (${daysOver}d overdue)`,
+            severity: 'urgent',
+            badge: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
+            description: desc
+          });
+        }
       }
+    }
+
+    if (pStatus === 'Delayed' && !alerts.some(a => a.type === 'COMPLETION_DATE_PASSED')) {
+      alerts.push({
+        type: 'STATUS_DELAYED',
+        label: 'Workflow Stage: Delayed',
+        severity: 'urgent',
+        badge: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
+        description: 'Project is flagged with Delayed workflow status.'
+      });
     }
 
     if ((pStatus === 'Work Ongoing' || pStatus === 'Execution') && pPhys < 30) {
@@ -451,7 +534,12 @@ export function ProjectProvider({ children }) {
       Number(p?.physicalProgress ?? p?.progress ?? 0) === 0
     ).length;
 
-    const delayed = list.filter(p => (getProjectAlerts(p) || []).length > 0).length;
+    const delayed = list.filter(p =>
+      isProjectDelayedOrFlagged(p) ||
+      p?.status === 'Delayed' ||
+      p?.stage === 'Delayed' ||
+      (getProjectAlerts(p) || []).length > 0
+    ).length;
 
     const avgPhysicalProgress = totalProjects > 0
       ? Math.round(
@@ -489,6 +577,7 @@ export function ProjectProvider({ children }) {
       return prog > 0 && prog < 100;
     }).length;
     const delayed = list.filter(p =>
+      isProjectDelayedOrFlagged(p) ||
       p?.stage === 'Delayed' || p?.status === 'Delayed' ||
       (getProjectAlerts(p) || []).length > 0
     ).length;
@@ -1122,6 +1211,8 @@ export function ProjectProvider({ children }) {
     isDemoData,
     // Helpers
     getProjectAlerts,
+    isProjectDelayed: isProjectDelayedOrFlagged,
+    isProjectDelayedOrFlagged,
     normalizeGndString,
     isGndMatch,
     // Project CRUD

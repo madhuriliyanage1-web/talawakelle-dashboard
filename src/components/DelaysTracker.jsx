@@ -17,6 +17,7 @@ export default function DelaysTracker() {
   const {
     filteredProjects = [],
     getProjectAlerts = () => [],
+    isProjectDelayedOrFlagged = () => false,
     openProjectDetail = () => {},
     setSelectedProject = () => {},
     setIsQuickUpdateOpen = () => {},
@@ -26,17 +27,19 @@ export default function DelaysTracker() {
   const [filterSeverity, setFilterSeverity] = useState('all');
   const [interventionNotice, setInterventionNotice] = useState(null);
 
-  // Collect all filtered projects with delays/alerts
+  // Collect all filtered projects with delays/alerts (including target date exceeded without physical completion)
   const flaggedProjects = (filteredProjects || [])
     .map(p => ({
       project: p,
-      alerts: getProjectAlerts?.(p) || []
+      alerts: getProjectAlerts?.(p) || [],
+      isDelayed: isProjectDelayedOrFlagged?.(p) || false
     }))
-    .filter(item => (item?.alerts || []).length > 0);
+    .filter(item => (item?.alerts || []).length > 0 || item?.isDelayed);
 
   // Filter by severity if selected
-  const filteredFlagged = (flaggedProjects || []).filter(({ alerts }) => {
+  const filteredFlagged = (flaggedProjects || []).filter(({ alerts, isDelayed }) => {
     if (filterSeverity === 'all') return true;
+    if (filterSeverity === 'urgent' && isDelayed) return true;
     return (alerts || []).some(a => a?.severity === filterSeverity);
   });
 
@@ -69,14 +72,14 @@ export default function DelaysTracker() {
           <div className="flex items-center space-x-2">
             <AlertOctagon className="w-4 h-4 text-rose-400 animate-pulse" />
             <span className="text-xs font-bold text-rose-400 uppercase tracking-wider">
-              Secretariat Delays & Bottlenecks Dashboard
+              Secretariat Delays & Bottlenecks Dashboard ({flaggedProjects.length} Flagged)
             </span>
           </div>
           <h2 className="text-xl font-extrabold text-white mt-1">
             Active Issues, Overdue Milestones & Remedial Action
           </h2>
           <p className="text-xs text-slate-400 max-w-2xl mt-0.5">
-            Automated compliance checks flagging contract agreement delays, work not started post-award, target date exceedance, and low financial disbursement.
+            Automated compliance checks flagging projects past target completion date without verified physical completion, contract agreement delays, and stalled execution.
           </p>
         </div>
 
@@ -150,10 +153,13 @@ export default function DelaysTracker() {
 
                   <div className="flex flex-col items-end space-y-1">
                     <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                      {alerts?.[0]?.severity || 'Review'}
+                      {alerts?.[0]?.severity || 'Urgent'}
                     </span>
                     <span className="text-[10px] text-slate-400 font-mono">
-                      Target: {project?.expectedCompletionDate || project?.year || '2026'}
+                      Target: {project?.targetCompletionDate || project?.expectedCompletionDate || project?.year || '2026'}
+                    </span>
+                    <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${project?.physicalCompletionDate ? 'bg-slate-800 text-slate-300' : 'bg-rose-950/60 text-rose-300 border border-rose-800/50'}`}>
+                      Physical Done: {project?.physicalCompletionDate || 'Not Recorded'}
                     </span>
                   </div>
                 </div>

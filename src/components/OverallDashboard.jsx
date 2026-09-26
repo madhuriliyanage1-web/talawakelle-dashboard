@@ -304,7 +304,10 @@ export default function OverallDashboard({ onNavigateToTab }) {
         </div>
 
         {/* Delayed / Flagged Projects */}
-        <div className="gov-card card-accent-red p-4 relative bg-rose-50/40">
+        <div
+          onClick={() => onNavigateToTab?.('delays')}
+          className={`gov-card card-accent-red p-4 relative bg-rose-50/40 ${onNavigateToTab ? 'cursor-pointer hover:shadow-md transition' : ''}`}
+        >
           <div className="flex items-center justify-between text-slate-500 mb-1">
             <span className="text-[11px] font-bold uppercase tracking-wider text-rose-700">Delayed / Flagged</span>
             <AlertOctagon className="w-4 h-4 text-rose-600" />
@@ -312,7 +315,10 @@ export default function OverallDashboard({ onNavigateToTab }) {
           <div className="text-2xl font-black text-rose-600">
             {executiveMetrics?.delayed ?? 0}
           </div>
-          <p className="text-[11px] text-rose-600/90 mt-1 font-semibold">Requires action</p>
+          <p className="text-[11px] text-rose-600/90 mt-1 font-semibold flex items-center justify-between">
+            <span>Requires action</span>
+            {onNavigateToTab && <span className="text-[10px] text-rose-600 font-bold hover:underline">View in Delays &rarr;</span>}
+          </p>
         </div>
 
         {/* Avg Physical Progress */}
