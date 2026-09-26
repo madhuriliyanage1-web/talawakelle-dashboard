@@ -57,10 +57,9 @@ export default function GndDashboard() {
     : 0;
   const delayedCount = (gndProjects || []).filter(p => (getProjectAlerts?.(p) || []).length > 0).length;
 
-  // Find thumbnail for a project
   const getThumbnail = (projectId) => {
     const item = (evidence || []).find(e => e?.projectId === projectId);
-    return item?.imageUrl || "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=400&q=80";
+    return item?.imageUrl || null;
   };
 
   return (
@@ -185,11 +184,18 @@ export default function GndDashboard() {
                 >
                   {/* Card Thumbnail & Badges */}
                   <div className="relative h-32 w-full rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
-                    <img
-                      src={thumb}
-                      alt={pName}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                    {thumb ? (
+                      <img
+                        src={thumb}
+                        alt={pName}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-400 space-y-1">
+                        <ImageIcon className="w-7 h-7 text-slate-300" />
+                        <span className="text-[10px] font-semibold text-slate-400">No photo uploaded</span>
+                      </div>
+                    )}
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
                     
                     {/* Category pill */}

@@ -220,15 +220,7 @@ export function ProjectProvider({ children }) {
       (INITIAL_CATEGORIES || []).forEach(c => batchCats.set(doc(db, 'categories', c.id), c));
       await batchCats.commit();
 
-      // 4. Seed Evidence
-      const batchEvid = writeBatch(db);
-      (INITIAL_EVIDENCE || []).forEach((e, i) => {
-        const evId = e?.id || `EVD-${String(i + 1).padStart(3, '0')}`;
-        batchEvid.set(doc(db, 'evidence', evId), { ...e, id: evId });
-      });
-      await batchEvid.commit();
 
-      // 5. Write settings document (triggers onSnapshot → setLoading(false))
       await setDoc(doc(db, 'settings', 'config'), {
         financialYears: Array.isArray(SECRETARIAT_META?.years)
           ? SECRETARIAT_META.years
@@ -1304,7 +1296,7 @@ export function useProject() {
       delayedProjects: 0,
       totalAllocation: 0,
       categories: INITIAL_CATEGORIES || [],
-      evidence: INITIAL_EVIDENCE || [],
+      evidence: [],
       gnds: INITIAL_GNDS || [],
       years: ['2026', '2025', '2024'],
       financialYears: [2026, 2025, 2024],
