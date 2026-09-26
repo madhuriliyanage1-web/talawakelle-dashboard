@@ -55,7 +55,7 @@ export default function MasterTable() {
       const q = String(tableSearch).toLowerCase();
       list = list.filter(p =>
         (p?.name || p?.title || '').toLowerCase().includes(q) ||
-        (p?.id || '').toLowerCase().includes(q) ||
+        (p?.projectCode || p?.id || '').toLowerCase().includes(q) ||
         (p?.gndName || p?.gnd || '').toLowerCase().includes(q) ||
         (p?.category || '').toLowerCase().includes(q) ||
         (p?.ceoOfficer || p?.responsibleOfficer || '').toLowerCase().includes(q)
@@ -94,7 +94,7 @@ export default function MasterTable() {
     ];
 
     const rows = (processedProjects || []).map(p => [
-      p?.id || '',
+      p?.projectCode || p?.id || '',
       p?.gndCode || '',
       `"${String(p?.gndName || p?.gnd || '').replace(/"/g, '""')}"`,
       `"${String(p?.name || p?.title || '').replace(/"/g, '""')}"`,
@@ -291,7 +291,7 @@ export default function MasterTable() {
               ) : (
                 paginatedProjects.map((p) => {
                   const alerts = getProjectAlerts?.(p) || [];
-                  const pId = p?.id || 'PROJ';
+                  const pId = p?.projectCode || p?.id || 'PROJ';
                   const pName = p?.name || p?.title || 'Project';
                   const pAlloc = parseFloat(p?.allocation) || 0;
                   const pPhys = Number(p?.physicalProgress ?? p?.progress ?? 0);

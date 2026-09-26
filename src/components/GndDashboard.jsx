@@ -170,7 +170,7 @@ export default function GndDashboard() {
             {(gndProjects || []).map(proj => {
               const alerts = getProjectAlerts?.(proj) || [];
               const thumb = getThumbnail(proj?.id);
-              const pId = proj?.id || 'PROJ';
+              const pId = proj?.projectCode || proj?.id || 'PROJ';
               const pName = proj?.name || proj?.title || 'Project';
               const pAlloc = parseFloat(proj?.allocation) || 0;
               const pPhys = Number(proj?.physicalProgress ?? proj?.progress ?? 0);

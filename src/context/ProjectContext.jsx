@@ -81,6 +81,37 @@ export const isProjectDelayedOrFlagged = (project, currentDate = new Date()) => 
   return !hasPhysDate || !isStatusCompleted || !isPhysicalComplete;
 };
 
+// ─── Category → Short Code Mapping (for structured project IDs) ──────────────
+const getCategoryCode = (category) => {
+  if (!category) return 'OTH';
+  const cat = category.toLowerCase();
+  if (cat.includes('rural road')) return 'Ru';
+  if (cat === 'dcb' || cat.includes('decentralized capital')) return 'DCB';
+  if (cat.includes('prajashakthi') || cat.includes('vdp')) return 'PS';
+  if (cat.includes('kovil')) return 'KD';
+  if (cat.includes('nila sewana')) return 'NS';
+  if (cat.includes('construction of houses') || cat.includes('waltrim')) return 'CH';
+  if (cat.includes('world food') || cat.includes('wfp')) return 'WFP';
+  if (cat.includes('school project') || cat.includes('ditwa')) return 'SP';
+  if (cat.includes('divisional secretariat') || cat.includes('office renovation')) return 'DSR';
+  return 'OTH';
+};
+
+/**
+ * Generate a structured project code: TK/PL/{CategoryCode}/{SeqNum}
+ * e.g. TK/PL/Ru/01, TK/PL/DCB/03, TK/PL/PS/02
+ */
+const generateProjectCode = (category, existingProjects = []) => {
+  const code = getCategoryCode(category);
+  const prefix = `TK/PL/${code}/`;
+  // Count existing projects that already carry the same prefix
+  const sameCategory = (existingProjects || []).filter(p =>
+    (p?.projectCode || '').startsWith(prefix)
+  );
+  const nextNum = sameCategory.length + 1;
+  return `${prefix}${String(nextNum).padStart(2, '0')}`;
+};
+
 // ─── Project Record Normalizer ────────────────────────────────────────────────
 const normalizeProjectRecord = (p, index = 0, gndsList = (INITIAL_GNDS || [])) => {
   const gndName = p?.gndName || p?.gnd || '';
@@ -149,6 +180,7 @@ const normalizeProjectRecord = (p, index = 0, gndsList = (INITIAL_GNDS || [])) =
     handoverAgency: p?.handoverAgency || p?.handoverParty || '',
     retentionReleaseDate: p?.retentionReleaseDate || '',
     evidence: p?.evidence || [],
+    projectCode: p?.projectCode || '',
     remarks: p?.remarks || '',
     issues: p?.issues || { hasIssue: false, description: '', escalationLevel: 'Normal' },
     lastUpdated: p?.lastUpdated || new Date().toISOString().split('T')[0]
@@ -587,7 +619,7 @@ export function ProjectProvider({ children }) {
       const currentGnds = gndsRef.current;
       const currentProjects = projectsRef.current;
       // Human-readable code kept for display; Firestore doc ID is auto-generated below.
-      const projectCode = `PRJ-TLW-${projectData?.year || 2026}-${String(currentProjects.length + 1).padStart(3, '0')}`;
+      const projectCode = generateProjectCode(projectData?.category, currentProjects);
       const targetGnd =
         currentGnds.find(g => g?.id === projectData?.gndId) || currentGnds[0] || {};
       const assignedCeo =
@@ -596,7 +628,7 @@ export function ProjectProvider({ children }) {
       const newProject = normalizeProjectRecord({
         ...projectData,
         id: projectCode,           // temporary — overwritten after addDoc resolves
-        projectCode,               // human-readable label preserved
+        projectCode,               // structured human-readable code (TK/PL/XX/NN)
         gndId: targetGnd?.id || 'GND-01',
         gndName: targetGnd?.name || '',
         gndCode: targetGnd?.code || '',
@@ -1207,6 +1239,8 @@ export function ProjectProvider({ children }) {
     isProjectDelayedOrFlagged,
     normalizeGndString,
     isGndMatch,
+    getCategoryCode,
+    generateProjectCode,
     // Project CRUD
     addProject,
     updateProject,

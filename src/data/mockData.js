@@ -451,6 +451,7 @@ export const COMMUNITY_EMPOWERMENT_OFFICERS = [
 export const INITIAL_PROJECTS = [
   {
     "id": "PRJ-TLW-2026-001",
+    "projectCode": "TK/PL/Ru/01",
     "gndId": "GND-001",
     "gndName": "476/T Waverley",
     "gndCode": "476/T",
@@ -480,6 +481,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-002",
+    "projectCode": "TK/PL/Ru/02",
     "gndId": "GND-005",
     "gndName": "475 I Holbrook",
     "gndCode": "475 I",
@@ -509,6 +511,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-003",
+    "projectCode": "TK/PL/Ru/03",
     "gndId": "GND-005",
     "gndName": "475 I Holbrook",
     "gndCode": "475 I",
@@ -538,6 +541,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-004",
+    "projectCode": "TK/PL/Ru/04",
     "gndId": "GND-005",
     "gndName": "475 I Holbrook",
     "gndCode": "475 I",
@@ -567,6 +571,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-005",
+    "projectCode": "TK/PL/Ru/05",
     "gndId": "GND-005",
     "gndName": "475 I Holbrook",
     "gndCode": "475 I",
@@ -596,6 +601,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-006",
+    "projectCode": "TK/PL/Ru/06",
     "gndId": "GND-003",
     "gndName": "476 Q Belmoral",
     "gndCode": "476 Q",
@@ -625,6 +631,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-007",
+    "projectCode": "TK/PL/Ru/07",
     "gndId": "GND-003",
     "gndName": "476 Q Belmoral",
     "gndCode": "476 Q",
@@ -654,6 +661,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-008",
+    "projectCode": "TK/PL/Ru/08",
     "gndId": "GND-005",
     "gndName": "475 I Holbrook",
     "gndCode": "475 I",
@@ -683,6 +691,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-009",
+    "projectCode": "TK/PL/Ru/09",
     "gndId": "GND-005",
     "gndName": "475 I Holbrook",
     "gndCode": "475 I",
@@ -712,6 +721,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-010",
+    "projectCode": "TK/PL/Ru/10",
     "gndId": "GND-003",
     "gndName": "476 Q Belmoral",
     "gndCode": "476 Q",
@@ -741,6 +751,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-011",
+    "projectCode": "TK/PL/Ru/11",
     "gndId": "GND-005",
     "gndName": "475 I Holbrook",
     "gndCode": "475 I",
@@ -770,6 +781,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-012",
+    "projectCode": "TK/PL/Ru/12",
     "gndId": "GND-003",
     "gndName": "476 Q Belmoral",
     "gndCode": "476 Q",
@@ -799,6 +811,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-013",
+    "projectCode": "TK/PL/Ru/13",
     "gndId": "GND-001",
     "gndName": "476/T Waverley",
     "gndCode": "476/T",
@@ -828,6 +841,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-014",
+    "projectCode": "TK/PL/Ru/14",
     "gndId": "GND-001",
     "gndName": "476/T Waverley",
     "gndCode": "476/T",
@@ -857,6 +871,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-015",
+    "projectCode": "TK/PL/Ru/15",
     "gndId": "GND-001",
     "gndName": "476/T Waverley",
     "gndCode": "476/T",
@@ -886,6 +901,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-016",
+    "projectCode": "TK/PL/Ru/16",
     "gndId": "GND-001",
     "gndName": "476/T Waverley",
     "gndCode": "476/T",
@@ -915,6 +931,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-017",
+    "projectCode": "TK/PL/Ru/17",
     "gndId": "GND-001",
     "gndName": "476/T Waverley",
     "gndCode": "476/T",
@@ -944,6 +961,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-018",
+    "projectCode": "TK/PL/Ru/18",
     "gndId": "GND-001",
     "gndName": "476/T Waverley",
     "gndCode": "476/T",
@@ -973,6 +991,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-019",
+    "projectCode": "TK/PL/Ru/19",
     "gndId": "GND-001",
     "gndName": "476/T Waverley",
     "gndCode": "476/T",
@@ -1002,6 +1021,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-020",
+    "projectCode": "TK/PL/Ru/20",
     "gndId": "GND-001",
     "gndName": "476/T Waverley",
     "gndCode": "476/T",
@@ -1031,6 +1051,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-021",
+    "projectCode": "TK/PL/Ru/21",
     "gndId": "GND-001",
     "gndName": "476/T Waverley",
     "gndCode": "476/T",
@@ -1060,6 +1081,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-022",
+    "projectCode": "TK/PL/Ru/22",
     "gndId": "GND-001",
     "gndName": "476/T Waverley",
     "gndCode": "476/T",
@@ -1089,6 +1111,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-023",
+    "projectCode": "TK/PL/Ru/23",
     "gndId": "GND-001",
     "gndName": "476/T Waverley",
     "gndCode": "476/T",
@@ -1118,6 +1141,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-024",
+    "projectCode": "TK/PL/PS/01",
     "gndId": "GND-001",
     "gndName": "476/T Waverley",
     "gndCode": "476/T",
@@ -1147,6 +1171,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-025",
+    "projectCode": "TK/PL/PS/02",
     "gndId": "GND-009",
     "gndName": "475 Z Greatwestern",
     "gndCode": "475 Z",
@@ -1176,6 +1201,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-026",
+    "projectCode": "TK/PL/DSR/01",
     "gndId": "GND-024",
     "gndName": "475D Watagoda",
     "gndCode": "475D",
@@ -1205,6 +1231,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-027",
+    "projectCode": "TK/PL/KD/01",
     "gndId": "GND-004",
     "gndName": "Eildenhall 475T",
     "gndCode": "475T",
@@ -1234,6 +1261,7 @@ export const INITIAL_PROJECTS = [
   },
   {
     "id": "PRJ-TLW-2026-028",
+    "projectCode": "TK/PL/CH/01",
     "gndId": "GND-022",
     "gndName": "Devon 475/C",
     "gndCode": "475/C",
