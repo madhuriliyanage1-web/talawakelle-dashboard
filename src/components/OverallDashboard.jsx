@@ -19,10 +19,8 @@ import {
   Banknote,
   CheckCircle2,
   Clock3,
-  AlertOctagon,
   TrendingUp,
   Percent,
-  Sparkles,
   ArrowUpRight,
   ShieldAlert,
   ChevronRight
@@ -228,7 +226,7 @@ export default function OverallDashboard({ onNavigateToTab }) {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {/* Total GNDs */}
         <div className="gov-card card-accent-green p-4 relative">
           <div className="flex items-center justify-between text-slate-500 mb-1">
@@ -303,23 +301,6 @@ export default function OverallDashboard({ onNavigateToTab }) {
           <p className="text-[11px] text-slate-500 mt-1">Planning / procurement</p>
         </div>
 
-        {/* Delayed / Flagged Projects */}
-        <div
-          onClick={() => onNavigateToTab?.('delays')}
-          className={`gov-card card-accent-red p-4 relative bg-rose-50/40 ${onNavigateToTab ? 'cursor-pointer hover:shadow-md transition' : ''}`}
-        >
-          <div className="flex items-center justify-between text-slate-500 mb-1">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-rose-700">Delayed / Flagged</span>
-            <AlertOctagon className="w-4 h-4 text-rose-600" />
-          </div>
-          <div className="text-2xl font-black text-rose-600">
-            {executiveMetrics?.delayed ?? 0}
-          </div>
-          <p className="text-[11px] text-rose-600/90 mt-1 font-semibold flex items-center justify-between">
-            <span>Requires action</span>
-            {onNavigateToTab && <span className="text-[10px] text-rose-600 font-bold hover:underline">View in Delays &rarr;</span>}
-          </p>
-        </div>
 
         {/* Avg Physical Progress */}
         <div className="gov-card card-accent-green p-4 relative">
