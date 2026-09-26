@@ -14,14 +14,14 @@ import {
   Search
 } from 'lucide-react';
 
-export default function EvidenceGallery() {
-  const {
-    evidence = [],
-    projects = [],
-    setIsAddEvidenceOpen = () => {},
-    setEvidenceTargetProjectId = () => {},
-    openProjectDetail = () => {}
-  } = useProject() || {};
+export default function EvidenceGallery(props = {}) {
+  const context = useProject() || {};
+
+  const evidence = props.evidence ?? context.evidence ?? [];
+  const projects = props.projects ?? context.projects ?? [];
+  const setIsAddEvidenceOpen = props.setIsAddEvidenceOpen ?? context.setIsAddEvidenceOpen ?? (() => {});
+  const setEvidenceTargetProjectId = props.setEvidenceTargetProjectId ?? context.setEvidenceTargetProjectId ?? (() => {});
+  const openProjectDetail = props.openProjectDetail ?? context.openProjectDetail ?? (() => {});
 
   const [phaseFilter, setPhaseFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,6 +35,7 @@ export default function EvidenceGallery() {
     if (q) {
       const proj = (projects || []).find(p => p?.id === item?.projectId);
       const haystack = [
+        proj?.projectCode,
         proj?.name,
         proj?.title,
         item?.projectId,
@@ -60,8 +61,16 @@ export default function EvidenceGallery() {
   };
 
   const handleAddPhoto = () => {
-    setEvidenceTargetProjectId?.(selectedProjectId !== 'all' ? selectedProjectId : (projects || [])[0]?.id);
-    setIsAddEvidenceOpen?.(true);
+    const targetId = props.targetProjectId || (projects && projects.length > 0 ? projects[0]?.id : null);
+    if (typeof setEvidenceTargetProjectId === 'function') {
+      setEvidenceTargetProjectId(targetId);
+    }
+    if (typeof props.onUploadClick === 'function') {
+      props.onUploadClick();
+    }
+    if (typeof setIsAddEvidenceOpen === 'function') {
+      setIsAddEvidenceOpen(true);
+    }
   };
 
   return (
@@ -191,7 +200,7 @@ export default function EvidenceGallery() {
                 {/* Card Content */}
                 <div className="p-4 space-y-2.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-mono text-emerald-400 font-bold">{item?.projectId || ''}</span>
+                    <span className="font-mono text-emerald-400 font-bold">{proj?.projectCode || proj?.id || item?.projectId || ''}</span>
                     <span className="text-slate-400 text-[10px] flex items-center space-x-1">
                       <User className="w-3 h-3 text-slate-500" />
                       <span>{item?.uploadedBy?.split('(')[0] || 'Technical Officer'}</span>
@@ -229,51 +238,56 @@ export default function EvidenceGallery() {
       )}
 
       {/* Lightbox Modal */}
-      {lightboxPhoto && (
-        <div
-          onClick={() => setLightboxPhoto(null)}
-          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
-        >
+      {lightboxPhoto && (() => {
+        const lbProj = (projects || []).find(p => p?.id === lightboxPhoto?.projectId);
+        return (
           <div
-            onClick={(e) => e.stopPropagation()}
-            className="relative max-w-4xl w-full bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl"
+            onClick={() => setLightboxPhoto(null)}
+            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
           >
-            <button
-              onClick={() => setLightboxPhoto(null)}
-              className="absolute top-4 right-4 p-2 rounded-full bg-slate-800/80 hover:bg-slate-700 text-white z-10"
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-4xl w-full bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl"
             >
-              <X className="w-5 h-5" />
-            </button>
+              <button
+                onClick={() => setLightboxPhoto(null)}
+                className="absolute top-4 right-4 p-2 rounded-full bg-slate-800/80 hover:bg-slate-700 text-white z-10"
+              >
+                <X className="w-5 h-5" />
+              </button>
 
-            <div className="max-h-[70vh] bg-black flex items-center justify-center">
-              <img
-                src={lightboxPhoto?.imageUrl}
-                alt={lightboxPhoto?.description || 'Inspection photo'}
-                className="max-h-[70vh] w-auto object-contain"
-              />
-            </div>
-
-            <div className="p-5 space-y-2 bg-slate-900">
-              <div className="flex items-center space-x-3">
-                <span className={`text-xs font-bold px-2.5 py-1 rounded-md border ${getPhaseBadge(lightboxPhoto?.activity)}`}>
-                  {lightboxPhoto?.activity || 'Site'} Phase
-                </span>
-                <span className="font-mono text-xs text-emerald-400 font-bold">
-                  {lightboxPhoto?.projectId || ''}
-                </span>
-                <span className="text-xs text-slate-400 flex items-center space-x-1">
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span>{lightboxPhoto?.date || ''}</span>
-                </span>
+              <div className="max-h-[70vh] bg-black flex items-center justify-center">
+                <img
+                  src={lightboxPhoto?.imageUrl}
+                  alt={lightboxPhoto?.description || 'Inspection photo'}
+                  className="max-h-[70vh] w-auto object-contain"
+                />
               </div>
-              <p className="text-sm text-slate-200">{lightboxPhoto?.description || ''}</p>
-              <p className="text-xs text-slate-400">
-                Uploaded by: <span className="text-slate-300 font-semibold">{lightboxPhoto?.uploadedBy || 'Technical Officer'}</span>
-              </p>
+
+              <div className="p-5 space-y-2 bg-slate-900">
+                <div className="flex items-center space-x-3">
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-md border ${getPhaseBadge(lightboxPhoto?.activity)}`}>
+                    {lightboxPhoto?.activity || 'Site'} Phase
+                  </span>
+                  <span className="font-mono text-xs text-emerald-400 font-bold">
+                    {lbProj?.projectCode || lbProj?.id || lightboxPhoto?.projectId || ''}
+                  </span>
+                  <span className="text-xs text-slate-400 flex items-center space-x-1">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>{lightboxPhoto?.date || ''}</span>
+                  </span>
+                </div>
+                <p className="text-sm text-slate-200">{lightboxPhoto?.description || ''}</p>
+                <p className="text-xs text-slate-400">
+                  Uploaded by: <span className="text-slate-300 font-semibold">{lightboxPhoto?.uploadedBy || 'Technical Officer'}</span>
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
+
+export const PhotoEvidenceGallery = EvidenceGallery;
