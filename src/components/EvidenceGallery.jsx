@@ -10,7 +10,8 @@ import {
   Maximize2,
   Layers,
   ChevronRight,
-  ExternalLink
+  ExternalLink,
+  Search
 } from 'lucide-react';
 
 export default function EvidenceGallery() {
@@ -23,14 +24,25 @@ export default function EvidenceGallery() {
   } = useProject() || {};
 
   const [phaseFilter, setPhaseFilter] = useState('all');
-  const [selectedProjectId, setSelectedProjectId] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
 
   // Filter evidence
+  const q = searchQuery.trim().toLowerCase();
   const filteredEvidence = (evidence || []).filter(item => {
     if (!item) return false;
     if (phaseFilter !== 'all' && item?.activity !== phaseFilter) return false;
-    if (selectedProjectId !== 'all' && item?.projectId !== selectedProjectId) return false;
+    if (q) {
+      const proj = (projects || []).find(p => p?.id === item?.projectId);
+      const haystack = [
+        proj?.name,
+        proj?.title,
+        item?.projectId,
+        proj?.gndName,
+        proj?.gndCode
+      ].filter(Boolean).join(' ').toLowerCase();
+      if (!haystack.includes(q)) return false;
+    }
     return true;
   });
 
@@ -99,21 +111,25 @@ export default function EvidenceGallery() {
           ))}
         </div>
 
-        {/* Project Dropdown */}
-        <div className="flex items-center space-x-2">
-          <label className="text-xs text-slate-400">Filter by Project:</label>
-          <select
-            value={selectedProjectId}
-            onChange={(e) => setSelectedProjectId(e.target.value)}
-            className="py-1.5 px-3 rounded-lg bg-slate-800 border border-slate-700 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-          >
-            <option value="all">All Projects ({(projects || []).length})</option>
-            {(projects || []).map(p => (
-              <option key={p?.id} value={p?.id}>
-                {p?.id} - {(p?.name || p?.title || '').slice(0, 30)}...
-              </option>
-            ))}
-          </select>
+        {/* Project Search */}
+        <div className="relative flex items-center">
+          <Search className="absolute left-3 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+          <input
+            id="evidence-project-search"
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by project name or code…"
+            className="pl-8 pr-8 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 w-64"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 text-slate-500 hover:text-slate-300 transition"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
         </div>
       </div>
 
