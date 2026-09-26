@@ -97,7 +97,7 @@ export default function AddEvidenceModal() {
             >
               {(projects || []).map(p => (
                 <option key={p?.id} value={p?.id}>
-                  {p?.id} - {(p?.name || p?.title || '').slice(0, 40)}...
+                  {(p?.title || p?.name || 'Unnamed Project').slice(0, 60)}{(p?.title || p?.name || '').length > 60 ? '…' : ''}
                 </option>
               ))}
             </select>
