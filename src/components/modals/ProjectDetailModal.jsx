@@ -40,7 +40,7 @@ export default function ProjectDetailModal() {
 
   const currentStageIndex = (WORKFLOW_STAGES || []).indexOf(selectedProject?.status || selectedProject?.stage);
   const alerts = getProjectAlerts?.(selectedProject) || [];
-  const projectPhotos = (evidence || []).filter(e => e?.projectId === selectedProject?.id);
+  const projectPhotos = (evidence || []).filter(e => e?.projectId === selectedProject?.id || (selectedProject?.projectCode && e?.projectId === selectedProject?.projectCode));
 
   const handleStageClick = (stageName) => {
     let phys = Number(selectedProject?.physicalProgress ?? selectedProject?.progress ?? 0);

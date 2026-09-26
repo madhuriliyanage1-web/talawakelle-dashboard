@@ -1086,7 +1086,7 @@ export function ProjectProvider({ children }) {
     if (!item) return;
     try {
       const newEv = {
-        id: `EVD-${String((evidence || []).length + 1).padStart(3, '0')}`,
+        id: item.id || `EVD-${String((evidence || []).length + 1).padStart(3, '0')}`,
         projectId: item.projectId || 'PRJ-01',
         activity: item.activity || 'During',
         description: item.description || '',
@@ -1094,6 +1094,7 @@ export function ProjectProvider({ children }) {
         uploadedBy: item.uploadedBy || 'Technical Officer',
         date: item.date || new Date().toISOString().split('T')[0]
       };
+      setEvidence(prev => [newEv, ...(prev || [])]);
       await setDoc(doc(db, 'evidence', newEv.id), newEv);
     } catch (err) {
       console.error('addEvidence error:', err);
@@ -1101,7 +1102,8 @@ export function ProjectProvider({ children }) {
   };
 
   const updateEvidence = async (id, updatedFields) => {
-    if (!id) return;
+    if (!id || !updatedFields) return;
+    setEvidence(prev => (prev || []).map(e => (e?.id === id ? { ...e, ...updatedFields } : e)));
     try {
       await updateDoc(doc(db, 'evidence', id), updatedFields);
     } catch (err) {
@@ -1111,6 +1113,7 @@ export function ProjectProvider({ children }) {
 
   const deleteEvidence = async (id) => {
     if (!id) return;
+    setEvidence(prev => (prev || []).filter(e => e?.id !== id));
     try {
       await deleteDoc(doc(db, 'evidence', id));
     } catch (err) {

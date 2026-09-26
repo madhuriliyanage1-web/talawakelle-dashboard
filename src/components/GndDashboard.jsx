@@ -57,8 +57,8 @@ export default function GndDashboard() {
     : 0;
   const delayedCount = (gndProjects || []).filter(p => (getProjectAlerts?.(p) || []).length > 0).length;
 
-  const getThumbnail = (projectId) => {
-    const item = (evidence || []).find(e => e?.projectId === projectId);
+  const getThumbnail = (projectId, projectCode) => {
+    const item = (evidence || []).find(e => e?.projectId === projectId || (projectCode && e?.projectId === projectCode));
     return item?.imageUrl || null;
   };
 
@@ -169,7 +169,7 @@ export default function GndDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {(gndProjects || []).map(proj => {
               const alerts = getProjectAlerts?.(proj) || [];
-              const thumb = getThumbnail(proj?.id);
+              const thumb = getThumbnail(proj?.id, proj?.projectCode);
               const pId = proj?.projectCode || proj?.id || 'PROJ';
               const pName = proj?.name || proj?.title || 'Project';
               const pAlloc = parseFloat(proj?.allocation) || 0;
