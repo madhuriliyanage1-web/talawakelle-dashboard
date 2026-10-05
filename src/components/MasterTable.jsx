@@ -133,10 +133,10 @@ export default function MasterTable() {
     setIsQuickUpdateOpen?.(true);
   };
 
-  const handleDelete = (id, e) => {
+  const handleDelete = (projectId, e) => {
     e?.stopPropagation?.();
-    if (window.confirm(`Are you sure you want to delete project ${id}?`)) {
-      deleteProject?.(id);
+    if (window.confirm("Are you sure you want to delete this project?")) {
+      deleteProject?.(projectId);
     }
   };
 
@@ -407,7 +407,7 @@ export default function MasterTable() {
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
                           <button
-                            onClick={(e) => handleDelete(pId, e)}
+                            onClick={(e) => handleDelete(p?.id || pId, e)}
                             className="p-1 rounded hover:bg-rose-900/40 text-rose-400 hover:text-rose-300"
                             title="Delete"
                           >

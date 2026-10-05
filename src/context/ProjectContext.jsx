@@ -274,7 +274,7 @@ export function ProjectProvider({ children }) {
     const unsubProjects = onSnapshot(
       collection(db, 'projects'),
       snapshot => {
-        const data = snapshot.docs.map(d => ({ ...d.data() }));
+        const data = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
         setProjects(data.map((p, i) => normalizeProjectRecord(p, i, gndsRef.current)));
       },
       err => {
@@ -693,10 +693,29 @@ export function ProjectProvider({ children }) {
     }
   };
 
-  const deleteProject = async (id) => {
-    if (!id) return;
+  const deleteProject = async (projectId) => {
+    if (!projectId) return;
+    // Resolve project doc ID if projectId is either p.id or p.projectCode
+    const target = (projectsRef.current || []).find(
+      p => p?.id === projectId || p?.projectCode === projectId
+    );
+    const id = target?.id || projectId;
+
+    // Immediately remove from state and UI upon confirmation
+    setProjects(prev => (prev || []).filter(p => p?.id !== id && p?.id !== projectId && p?.projectCode !== projectId));
+    if (selectedProject?.id === id || selectedProject?.id === projectId || selectedProject?.projectCode === projectId) {
+      setSelectedProject(null);
+      setIsDetailOpen(false);
+    }
+
     try {
-      await deleteDoc(doc(db, 'projects', id));
+      await deleteDoc(doc(db, "projects", id));
+      if (id !== projectId) {
+        try {
+          await deleteDoc(doc(db, "projects", projectId));
+        } catch (_) {}
+      }
+      await setDoc(doc(db, 'settings', 'config'), { isDemoData: false }, { merge: true });
     } catch (err) {
       console.error('deleteProject error:', err);
     }
