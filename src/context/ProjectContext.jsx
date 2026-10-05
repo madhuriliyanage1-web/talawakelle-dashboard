@@ -120,12 +120,12 @@ const normalizeProjectRecord = (p, index = 0, gndsList = (INITIAL_GNDS || [])) =
     (gndsList || []).find(g =>
       isGndMatch({ ...p, gndName, gnd: gndName }, g, gndsList || [])
     );
+  // Preserve user-assigned CEO / responsible officer from the project itself
   const ceo =
-    (matchedGnd ? matchedGnd.ceoOfficer : null) ||
     p?.ceoOfficer ||
-    (p?.responsibleOfficer && !p?.responsibleOfficer?.includes('(')
-      ? p.responsibleOfficer
-      : (matchedGnd?.ceoOfficer || 'Unassigned'));
+    p?.responsibleOfficer ||
+    (matchedGnd ? matchedGnd.ceoOfficer : null) ||
+    'Unassigned';
   const title = p?.title || p?.name || 'Untitled Project';
   const progressVal = Number(p?.physicalProgress ?? p?.progress ?? 0) || 0;
   const stageVal = p?.status || p?.stage || 'Project Identification';
@@ -142,11 +142,11 @@ const normalizeProjectRecord = (p, index = 0, gndsList = (INITIAL_GNDS || [])) =
     title,
     name: title,
     description:
-      p?.description || `${title} in ${matchedGnd ? matchedGnd.name : (gndName || 'Talawakelle')}`,
-    gndId: matchedGnd ? matchedGnd.id : (p?.gndId || `GND-${String(index + 1).padStart(2, '0')}`),
-    gndName: matchedGnd ? matchedGnd.name : gndName,
-    gndCode: matchedGnd ? matchedGnd.code : (p?.gndCode || ''),
-    gnd: matchedGnd ? matchedGnd.name : gndName,
+      p?.description || `${title} in ${p?.gndName || (matchedGnd ? matchedGnd.name : (gndName || 'Talawakelle'))}`,
+    gndId: p?.gndId || (matchedGnd ? matchedGnd.id : `GND-${String(index + 1).padStart(2, '0')}`),
+    gndName: p?.gndName || (matchedGnd ? matchedGnd.name : gndName),
+    gndCode: p?.gndCode || (matchedGnd ? matchedGnd.code : ''),
+    gnd: p?.gnd || p?.gndName || (matchedGnd ? matchedGnd.name : gndName),
     category: p?.category || 'Rural Road Development',
     allocation: allocVal,
     expenditure: expVal,
@@ -232,6 +232,14 @@ export function ProjectProvider({ children }) {
   // ── Seed initial data to Firestore (first-run only) ──────────────────────
   const seedInitialData = useCallback(async () => {
     try {
+      // Guard: Never overwrite existing projects if projects collection has records!
+      const existingProjectsSnap = await getDocs(collection(db, 'projects'));
+      if (!existingProjectsSnap.empty) {
+        await setDoc(doc(db, 'settings', 'config'), { isDemoData: false }, { merge: true });
+        setLoading(false);
+        return;
+      }
+
       const gndsToSeed = INITIAL_GNDS || [];
 
       // 1. Seed GNDs first (so project normalization can use them)
@@ -315,7 +323,7 @@ export function ProjectProvider({ children }) {
     // 5. Settings — triggers seeding on first run if document doesn't exist
     const unsubSettings = onSnapshot(
       doc(db, 'settings', 'config'),
-      snap => {
+      async (snap) => {
         if (snap.exists()) {
           const data = snap.data();
           setFinancialYears(data.financialYears || [2026, 2025, 2024]);
@@ -324,7 +332,23 @@ export function ProjectProvider({ children }) {
           setIsDemoData(data.isDemoData !== false);
           setLoading(false);
         } else {
-          // First run — auto-seed all collections
+          // Guard: Before seeding on missing settings, verify if projects already exist!
+          try {
+            const existingProjectsSnap = await getDocs(collection(db, 'projects'));
+            if (!existingProjectsSnap.empty) {
+              await setDoc(doc(db, 'settings', 'config'), {
+                financialYears: Array.isArray(SECRETARIAT_META?.years) ? SECRETARIAT_META.years : [2026, 2025, 2024],
+                customCeos: [],
+                ceoDirectory: {},
+                isDemoData: false
+              }, { merge: true });
+              setLoading(false);
+              return;
+            }
+          } catch (e) {
+            console.warn('Could not inspect projects before seeding:', e);
+          }
+          // First run on completely empty database — auto-seed
           seedInitialData();
         }
       },
@@ -616,47 +640,66 @@ export function ProjectProvider({ children }) {
   const addProject = async (projectData) => {
     if (!projectData) return;
     try {
-      const currentGnds = gndsRef.current;
-      const currentProjects = projectsRef.current;
-      // Human-readable code kept for display; Firestore doc ID is auto-generated below.
-      const projectCode = generateProjectCode(projectData?.category, currentProjects);
+      const currentGnds = gndsRef.current || [];
+      const currentProjects = projectsRef.current || [];
+      const projectCode = projectData?.projectCode || generateProjectCode(projectData?.category, currentProjects);
       const targetGnd =
-        currentGnds.find(g => g?.id === projectData?.gndId) || currentGnds[0] || {};
+        currentGnds.find(g => g?.id === projectData?.gndId) ||
+        currentGnds.find(g => normalizeGndString(g?.id) === normalizeGndString(projectData?.gndId)) ||
+        currentGnds[0] || {};
       const assignedCeo =
-        projectData?.ceoOfficer || projectData?.responsibleOfficer || targetGnd?.ceoOfficer || '';
+        projectData?.ceoOfficer || projectData?.responsibleOfficer || targetGnd?.ceoOfficer || 'Unassigned';
 
-      const newProject = normalizeProjectRecord({
+      const newProjectData = {
         ...projectData,
-        id: projectCode,           // temporary — overwritten after addDoc resolves
-        projectCode,               // structured human-readable code (TK/PL/XX/NN)
-        gndId: targetGnd?.id || 'GND-01',
-        gndName: targetGnd?.name || '',
-        gndCode: targetGnd?.code || '',
-        ceoOfficer: assignedCeo,
-        responsibleOfficer: assignedCeo,
+        projectCode,
+        title: projectData?.title || projectData?.name || 'Untitled Project',
+        name: projectData?.name || projectData?.title || 'Untitled Project',
+        description: projectData?.description || `${projectData?.name || 'Project'} in ${targetGnd?.name || 'Talawakelle'}`,
+        gndId: targetGnd?.id || projectData?.gndId || 'GND-01',
+        gndName: targetGnd?.name || projectData?.gndName || '',
+        gndCode: targetGnd?.code || projectData?.gndCode || '',
+        gnd: targetGnd?.name || projectData?.gndName || '',
+        category: projectData?.category || 'Rural Road Development',
         allocation: parseFloat(projectData?.allocation) || 0,
         expenditure: parseFloat(projectData?.expenditure) || 0,
-        physicalProgress: parseFloat(projectData?.physicalProgress) || 0,
+        physicalProgress: parseFloat(projectData?.physicalProgress ?? projectData?.progress ?? 0) || 0,
+        progress: parseFloat(projectData?.physicalProgress ?? projectData?.progress ?? 0) || 0,
         financialProgress: parseFloat(projectData?.financialProgress) || 0,
-        status: projectData?.status || 'Project Identification',
+        status: projectData?.status || projectData?.stage || 'Project Identification',
+        stage: projectData?.stage || projectData?.status || 'Project Identification',
+        ceoOfficer: assignedCeo,
+        responsibleOfficer: assignedCeo,
+        financialYear: String(projectData?.financialYear || projectData?.year || '2026'),
+        year: String(projectData?.year || projectData?.financialYear || '2026'),
+        targetCompletionDate: projectData?.targetCompletionDate || projectData?.expectedCompletionDate || '2026-12-31',
+        expectedCompletionDate: projectData?.expectedCompletionDate || projectData?.targetCompletionDate || '2026-12-31',
+        approvalDate: projectData?.approvalDate || '2026-01-15',
+        provisionDate: projectData?.provisionDate || '2026-02-01',
+        remarks: projectData?.remarks || '',
+        issues: projectData?.issues || { hasIssue: false, description: '', escalationLevel: 'Normal' },
         lastUpdated: new Date().toISOString().split('T')[0]
-      }, currentProjects.length, currentGnds);
+      };
 
-      // addDoc always creates a NEW document — no more overwriting existing projects.
-      const docRef = await addDoc(collection(db, 'projects'), newProject);
-      // Write the real Firestore ID back into the document so the app can reference it.
-      await updateDoc(docRef, { id: docRef.id });
+      // addDoc creates a brand-new document in Firestore
+      const docRef = await addDoc(collection(db, 'projects'), newProjectData);
+      // Update with merge to set doc ID
+      await setDoc(docRef, { id: docRef.id }, { merge: true });
+
+      const finalProject = { ...newProjectData, id: docRef.id };
+      setProjects(prev => [finalProject, ...(prev || []).filter(p => p?.id !== docRef.id)]);
       await setDoc(doc(db, 'settings', 'config'), { isDemoData: false }, { merge: true });
+      return finalProject;
     } catch (err) {
       console.error('addProject error:', err);
     }
   };
 
   const updateProject = async (id, updatedFields) => {
-    if (!id) return;
+    if (!id || !updatedFields) return;
     try {
-      const current = projectsRef.current.find(p => p?.id === id);
-      if (!current) return;
+      const current = (projectsRef.current || []).find(p => p?.id === id || p?.projectCode === id);
+      const docId = current?.id || id;
 
       const currentGnds = gndsRef.current || [];
       const selectedGndId = updatedFields?.gndId !== undefined ? updatedFields.gndId : current?.gndId;
@@ -673,21 +716,33 @@ export function ProjectProvider({ children }) {
           }
         : {};
 
-      const updated = normalizeProjectRecord(
-        {
-          ...current,
-          ...updatedFields,
-          ...gndUpdates,
-          lastUpdated: new Date().toISOString().split('T')[0]
-        },
-        0,
-        currentGnds
-      );
-      await setDoc(doc(db, 'projects', id), updated);
-      await setDoc(doc(db, 'settings', 'config'), { isDemoData: false }, { merge: true });
-      if (selectedProject?.id === id) {
-        setSelectedProject(updated);
+      const fieldsToSave = {
+        ...updatedFields,
+        ...gndUpdates,
+        lastUpdated: new Date().toISOString().split('T')[0]
+      };
+
+      // Optimistically update local state immediately so UI reflects updates
+      setProjects(prev => (prev || []).map(p => {
+        if (p?.id === docId || p?.id === id || (p?.projectCode && p?.projectCode === id)) {
+          return { ...p, ...fieldsToSave };
+        }
+        return p;
+      }));
+
+      if (selectedProject?.id === docId || selectedProject?.id === id) {
+        setSelectedProject(prev => ({ ...prev, ...fieldsToSave }));
       }
+
+      // Use updateDoc for editing with fallback to setDoc with merge: true so data is never overwritten
+      const docRef = doc(db, 'projects', docId);
+      try {
+        await updateDoc(docRef, fieldsToSave);
+      } catch (err) {
+        await setDoc(docRef, fieldsToSave, { merge: true });
+      }
+
+      await setDoc(doc(db, 'settings', 'config'), { isDemoData: false }, { merge: true });
     } catch (err) {
       console.error('updateProject error:', err);
     }
