@@ -35,6 +35,7 @@ export default function AddProjectModal() {
     expenditure: '',
     approvalDate: new Date().toISOString().split('T')[0],
     provisionDate: new Date().toISOString().split('T')[0],
+    physicalStartDate: '',
     expectedCompletionDate: '2026-12-31',
     status: 'Project Identification',
     physicalProgress: 0,
@@ -86,6 +87,7 @@ export default function AddProjectModal() {
         expenditure: selectedProject?.expenditure ?? '',
         approvalDate: selectedProject?.approvalDate || '',
         provisionDate: selectedProject?.provisionDate || '',
+        physicalStartDate: selectedProject?.physicalStartDate || '',
         expectedCompletionDate: selectedProject?.expectedCompletionDate || '',
         status: selectedProject?.status || selectedProject?.stage || 'Project Identification',
         physicalProgress: Number(selectedProject?.physicalProgress ?? selectedProject?.progress ?? 0),
@@ -118,6 +120,7 @@ export default function AddProjectModal() {
         expenditure: '',
         approvalDate: new Date().toISOString().split('T')[0],
         provisionDate: new Date().toISOString().split('T')[0],
+        physicalStartDate: '',
         expectedCompletionDate: '2026-12-31',
         status: 'Project Identification',
         physicalProgress: 0,
@@ -351,7 +354,7 @@ export default function AddProjectModal() {
           </div>
 
           {/* Dates */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
               <label className="block text-slate-300 font-semibold mb-1">Approval Date</label>
               <input
@@ -369,6 +372,16 @@ export default function AddProjectModal() {
                 value={formData.provisionDate}
                 onChange={(e) => setFormData({ ...formData, provisionDate: e.target.value })}
                 className="w-full p-2 rounded-xl bg-slate-800 border border-slate-700 text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-slate-300 font-semibold mb-1">Physical Start Date</label>
+              <input
+                type="date"
+                value={formData.physicalStartDate}
+                onChange={(e) => setFormData({ ...formData, physicalStartDate: e.target.value })}
+                className="w-full p-2 rounded-xl bg-slate-800 border border-slate-700 text-white font-mono"
               />
             </div>
 

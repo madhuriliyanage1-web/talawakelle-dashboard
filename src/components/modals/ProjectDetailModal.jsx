@@ -218,7 +218,7 @@ export default function ProjectDetailModal() {
           </div>
 
           {/* Key Dates & Responsible Personnel */}
-          <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+          <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-800 grid grid-cols-2 sm:grid-cols-5 gap-4 text-xs">
             <div>
               <span className="text-slate-400 text-[10px] uppercase block">Approval Date</span>
               <span className="font-semibold text-slate-200">{selectedProject?.approvalDate || 'N/A'}</span>
@@ -226,6 +226,12 @@ export default function ProjectDetailModal() {
             <div>
               <span className="text-slate-400 text-[10px] uppercase block">Provision Received</span>
               <span className="font-semibold text-slate-200">{selectedProject?.provisionDate || 'N/A'}</span>
+            </div>
+            <div>
+              <span className="text-slate-400 text-[10px] uppercase block">Physical Start Date</span>
+              <span className="font-semibold text-emerald-400 font-mono">
+                {selectedProject?.physicalStartDate || 'Not set'}
+              </span>
             </div>
             <div>
               <span className="text-slate-400 text-[10px] uppercase block">Target Completion</span>

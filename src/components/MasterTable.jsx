@@ -90,7 +90,7 @@ export default function MasterTable() {
       'Project ID', 'GND Code', 'GND Name', 'Project Name', 'Category',
       'Allocation (LKR)', 'Expenditure (LKR)', 'Physical Progress %',
       'Financial Progress %', 'Workflow Status', 'Community Empowerment Officer (CEO)',
-      'Target Completion Date', 'Remarks'
+      'Physical Start Date', 'Target Completion Date', 'Remarks'
     ];
 
     const rows = (processedProjects || []).map(p => [
@@ -105,6 +105,7 @@ export default function MasterTable() {
       p?.financialProgress ?? 0,
       p?.status || p?.stage || '',
       `"${String(p?.ceoOfficer || p?.responsibleOfficer || '').replace(/"/g, '""')}"`,
+      p?.physicalStartDate || '',
       p?.expectedCompletionDate || '',
       `"${String(p?.remarks || '').replace(/"/g, '""')}"`
     ]);
@@ -270,6 +271,15 @@ export default function MasterTable() {
                   </div>
                 </th>
                 <th
+                  onClick={() => handleSort('physicalStartDate')}
+                  className="py-3 px-3.5 cursor-pointer hover:text-white"
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>Physical Start</span>
+                    <ArrowUpDown className="w-3 h-3" />
+                  </div>
+                </th>
+                <th
                   onClick={() => handleSort('expectedCompletionDate')}
                   className="py-3 px-3.5 cursor-pointer hover:text-white"
                 >
@@ -284,7 +294,7 @@ export default function MasterTable() {
             <tbody className="divide-y divide-slate-800/60">
               {(paginatedProjects || []).length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="py-8 text-center text-slate-400">
+                  <td colSpan={11} className="py-8 text-center text-slate-400">
                     No matching projects found.
                   </td>
                 </tr>
@@ -375,6 +385,15 @@ export default function MasterTable() {
                         <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-500/15 text-blue-300 border border-blue-500/30">
                           {p?.status || p?.stage || 'Planning'}
                         </span>
+                      </td>
+
+                      {/* Physical Start Date */}
+                      <td className="py-3 px-3.5 text-slate-300 whitespace-nowrap font-mono text-[11px]">
+                        {p?.physicalStartDate ? (
+                          <span className="text-emerald-400 font-medium">{p.physicalStartDate}</span>
+                        ) : (
+                          <span className="text-slate-500 italic">Not set</span>
+                        )}
                       </td>
 
                       {/* Target Date */}

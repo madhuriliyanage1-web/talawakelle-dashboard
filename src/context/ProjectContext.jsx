@@ -163,6 +163,7 @@ const normalizeProjectRecord = (p, index = 0, gndsList = (INITIAL_GNDS || [])) =
     expectedCompletionDate: targetCompVal,
     approvalDate: p?.approvalDate || '2026-01-15',
     provisionDate: p?.provisionDate || '2026-02-01',
+    physicalStartDate: p?.physicalStartDate || '',
     // Beneficiary Metrics (Optional, default 0)
     directBeneficiaries: Math.max(0, parseInt(p?.directBeneficiaries ?? p?.directBeneficiariesCount ?? 0, 10) || 0),
     directBeneficiariesCount: Math.max(0, parseInt(p?.directBeneficiaries ?? p?.directBeneficiariesCount ?? 0, 10) || 0),
@@ -676,6 +677,7 @@ export function ProjectProvider({ children }) {
         expectedCompletionDate: projectData?.expectedCompletionDate || projectData?.targetCompletionDate || '2026-12-31',
         approvalDate: projectData?.approvalDate || '2026-01-15',
         provisionDate: projectData?.provisionDate || '2026-02-01',
+        physicalStartDate: projectData?.physicalStartDate || '',
         remarks: projectData?.remarks || '',
         issues: projectData?.issues || { hasIssue: false, description: '', escalationLevel: 'Normal' },
         lastUpdated: new Date().toISOString().split('T')[0]
