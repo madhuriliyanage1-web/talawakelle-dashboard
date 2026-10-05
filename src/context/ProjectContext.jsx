@@ -3,13 +3,9 @@
 // Real-time Firestore sync (replaces localStorage + Google Sheets CSV)
 // ─────────────────────────────────────────────────────────────────────────────
 import React, {
-  createContext, useContext, useState, useEffect, useMemo, useRef, useCallback
+  createContext, useContext, useState, useEffect, useMemo, useRef
 } from 'react';
 import {
-  INITIAL_PROJECTS,
-  INITIAL_GNDS,
-  INITIAL_CATEGORIES,
-  INITIAL_EVIDENCE,
   WORKFLOW_STAGES,
   SECRETARIAT_META,
   COMMUNITY_EMPOWERMENT_OFFICERS
@@ -131,7 +127,7 @@ const generateProjectCode = (category, existingProjects = []) => {
 };
 
 // ─── Project Record Normalizer ────────────────────────────────────────────────
-const normalizeProjectRecord = (p, index = 0, gndsList = (INITIAL_GNDS || [])) => {
+const normalizeProjectRecord = (p, index = 0, gndsList = []) => {
   const gndName = p?.gndName || p?.gnd || '';
   const matchedGnd =
     (gndsList || []).find(g => g?.id && p?.gndId && (g.id === p.gndId || normalizeGndString(g.id) === normalizeGndString(p.gndId))) ||
@@ -281,61 +277,25 @@ export function ProjectProvider({ children }) {
   useEffect(() => { ceoDirectoryRef.current = ceoDirectory; }, [ceoDirectory]);
   useEffect(() => { financialYearsRef.current = financialYears; }, [financialYears]);
 
-  // ── Seed initial data to Firestore (first-run only) ──────────────────────
-  const seedInitialData = useCallback(async () => {
-    try {
-      // Guard: Never overwrite existing projects if projects collection has records!
-      const existingProjectsSnap = await getDocs(collection(db, 'projects'));
-      if (!existingProjectsSnap.empty) {
-        await setDoc(doc(db, 'settings', 'config'), { isDemoData: false }, { merge: true });
-        setLoading(false);
-        return;
-      }
-
-      const gndsToSeed = INITIAL_GNDS || [];
-
-      // 1. Seed GNDs first (so project normalization can use them)
-      const batchGnds = writeBatch(db);
-      gndsToSeed.forEach(g => batchGnds.set(doc(db, 'gnds', g.id), g));
-      await batchGnds.commit();
-
-      // 2. Seed Projects
-      const batchProj = writeBatch(db);
-      (INITIAL_PROJECTS || []).forEach((p, i) => {
-        const normalized = normalizeProjectRecord(p, i, gndsToSeed);
-        batchProj.set(doc(db, 'projects', normalized.id), normalized);
-      });
-      await batchProj.commit();
-
-      // 3. Seed Categories
-      const batchCats = writeBatch(db);
-      (INITIAL_CATEGORIES || []).forEach(c => batchCats.set(doc(db, 'categories', c.id), c));
-      await batchCats.commit();
-
-
-      await setDoc(doc(db, 'settings', 'config'), {
-        financialYears: Array.isArray(SECRETARIAT_META?.years)
-          ? SECRETARIAT_META.years
-          : [2026, 2025, 2024],
-        customCeos: [],
-        ceoDirectory: {},
-        isDemoData: true
-      });
-    } catch (err) {
-      console.error('Firestore seed error:', err);
-      setDbError(err?.message || 'Failed to initialize database. Check your Firebase credentials.');
-      setLoading(false);
-    }
-  }, []);
+  // NOTE: Mock data seeding has been permanently disabled.
+  // All data is loaded exclusively from Firebase Firestore.
 
   // ── Real-time Firestore Listeners ─────────────────────────────────────────
   useEffect(() => {
-    // 1. Projects
+    // 1. Projects — deduplicated by Firestore document ID
     const unsubProjects = onSnapshot(
       collection(db, 'projects'),
       snapshot => {
-        const data = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
-        setProjects(data.map((p, i) => normalizeProjectRecord(p, i, gndsRef.current)));
+        // Build a Map keyed by Firestore doc ID so duplicate docs are impossible
+        const seenIds = new Map();
+        snapshot.docs.forEach(d => {
+          const docId = d.id;
+          if (!seenIds.has(docId)) {
+            seenIds.set(docId, { ...d.data(), id: docId });
+          }
+        });
+        const uniqueData = Array.from(seenIds.values());
+        setProjects(uniqueData.map((p, i) => normalizeProjectRecord(p, i, gndsRef.current)));
       },
       err => {
         console.error('Projects listener error:', err);
@@ -372,7 +332,7 @@ export function ProjectProvider({ children }) {
       err => console.error('Evidence listener error:', err)
     );
 
-    // 5. Settings — triggers seeding on first run if document doesn't exist
+    // 5. Settings — NEVER seeds mock data; creates a blank config doc if missing
     const unsubSettings = onSnapshot(
       doc(db, 'settings', 'config'),
       async (snap) => {
@@ -381,27 +341,21 @@ export function ProjectProvider({ children }) {
           setFinancialYears(data.financialYears || [2026, 2025, 2024]);
           setCustomCeos(data.customCeos || []);
           setCeoDirectory(data.ceoDirectory || {});
-          setIsDemoData(data.isDemoData !== false);
+          setIsDemoData(false); // Always treat live Firestore data as real, not demo
           setLoading(false);
         } else {
-          // Guard: Before seeding on missing settings, verify if projects already exist!
+          // Settings document missing — create a blank one. Never seed mock projects.
           try {
-            const existingProjectsSnap = await getDocs(collection(db, 'projects'));
-            if (!existingProjectsSnap.empty) {
-              await setDoc(doc(db, 'settings', 'config'), {
-                financialYears: Array.isArray(SECRETARIAT_META?.years) ? SECRETARIAT_META.years : [2026, 2025, 2024],
-                customCeos: [],
-                ceoDirectory: {},
-                isDemoData: false
-              }, { merge: true });
-              setLoading(false);
-              return;
-            }
+            await setDoc(doc(db, 'settings', 'config'), {
+              financialYears: Array.isArray(SECRETARIAT_META?.years) ? SECRETARIAT_META.years : [2026, 2025, 2024],
+              customCeos: [],
+              ceoDirectory: {},
+              isDemoData: false
+            });
           } catch (e) {
-            console.warn('Could not inspect projects before seeding:', e);
+            console.warn('Could not initialize settings document:', e);
           }
-          // First run on completely empty database — auto-seed
-          seedInitialData();
+          setLoading(false);
         }
       },
       err => {
@@ -418,7 +372,7 @@ export function ProjectProvider({ children }) {
       unsubEvidence();
       unsubSettings();
     };
-  }, [seedInitialData]);
+  }, []);
 
   // ── Filter State (local only — not persisted to Firestore) ───────────────
   const [filters, setFilters] = useState({
@@ -698,6 +652,17 @@ export function ProjectProvider({ children }) {
     try {
       const currentGnds = gndsRef.current || [];
       const currentProjects = projectsRef.current || [];
+
+      // ── Duplicate title detection ──────────────────────────────────────────
+      const incomingTitle = String(projectData?.name || projectData?.title || '').trim().toLowerCase();
+      const isDuplicateTitle = incomingTitle && currentProjects.some(
+        p => String(p?.name || p?.title || '').trim().toLowerCase() === incomingTitle
+      );
+      if (isDuplicateTitle) {
+        alert(`A project named "${projectData?.name || projectData?.title}" already exists. Please use a unique project name.`);
+        return;
+      }
+
       const projectCode = projectData?.projectCode || generateProjectCode(projectData?.category, currentProjects);
       const targetGnd =
         currentGnds.find(g => g?.id === projectData?.gndId) ||
@@ -738,13 +703,18 @@ export function ProjectProvider({ children }) {
         lastUpdated: new Date().toISOString().split('T')[0]
       };
 
-      // addDoc creates a brand-new document in Firestore
+      // addDoc creates a brand-new document in Firestore with a unique auto-ID
       const docRef = await addDoc(collection(db, 'projects'), newProjectData);
-      // Update with merge to set doc ID
+      // Store the Firestore auto-ID inside the document itself for easy lookup
       await setDoc(docRef, { id: docRef.id }, { merge: true });
 
       const finalProject = { ...newProjectData, id: docRef.id };
-      setProjects(prev => [finalProject, ...(prev || []).filter(p => p?.id !== docRef.id)]);
+      // The onSnapshot listener will pick up this new doc; update local state
+      // defensively to avoid any race-condition gap in the UI.
+      setProjects(prev => {
+        const withoutDupe = (prev || []).filter(p => p?.id !== docRef.id);
+        return [finalProject, ...withoutDupe];
+      });
       await setDoc(doc(db, 'settings', 'config'), { isDemoData: false }, { merge: true });
       return finalProject;
     } catch (err) {
@@ -1261,7 +1231,8 @@ export function ProjectProvider({ children }) {
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // Reset to Demo Data (clears Firestore, re-seeds from mockData)
+  // Clear All Data (wipes Firestore collections — IRREVERSIBLE)
+  // NOTE: This does NOT re-seed mock data. The DB will be empty after this operation.
   // ═══════════════════════════════════════════════════════════════════════════
 
   const resetToDemoData = async () => {
@@ -1275,9 +1246,10 @@ export function ProjectProvider({ children }) {
         clearCollection('evidence'),
         deleteDoc(doc(db, 'settings', 'config'))
       ]);
-      // settings/config deletion triggers onSnapshot → !snap.exists() → seedInitialData()
+      // After deletion, onSnapshot for settings/config will fire with snap.exists() === false
+      // which now creates a blank settings doc (no mock data is seeded).
     } catch (err) {
-      console.error('resetToDemoData error:', err);
+      console.error('clearAllData error:', err);
       setLoading(false);
     }
   };
