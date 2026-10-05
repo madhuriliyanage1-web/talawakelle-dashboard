@@ -7,7 +7,8 @@ export default function AddGndModal() {
     isAddGndOpen = false,
     setIsAddGndOpen = () => {},
     addGnd = () => {},
-    ceoOfficers = []
+    ceoOfficers = [],
+    isAuthorized = false
   } = useProject() || {};
 
   const [name, setName] = useState('');
@@ -18,7 +19,7 @@ export default function AddGndModal() {
   const [isCustomOfficer, setIsCustomOfficer] = useState(false);
   const [phone, setPhone] = useState('+94 52 225 8234');
 
-  if (!isAddGndOpen) return null;
+  if (!isAddGndOpen || !isAuthorized) return null;
 
   const handleSubmit = (e) => {
     e.preventDefault();

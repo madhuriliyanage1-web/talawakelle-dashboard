@@ -13,7 +13,8 @@ export default function AddCeoModal() {
     gnds = [],
     projects = [],
     editingCeo = null,
-    setEditingCeo = () => {}
+    setEditingCeo = () => {},
+    isAuthorized = false
   } = useProject() || {};
 
   const [activeTab, setActiveTab] = useState('add'); // 'add' | 'edit'
@@ -69,7 +70,7 @@ export default function AddCeoModal() {
     }
   };
 
-  if (!isAddCeoOpen) return null;
+  if (!isAddCeoOpen || !isAuthorized) return null;
 
   const handleClose = () => {
     setSuccessMessage('');

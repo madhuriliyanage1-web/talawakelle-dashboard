@@ -15,7 +15,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
-  Filter
+  Filter,
+  Lock
 } from 'lucide-react';
 
 export default function MasterTable() {
@@ -28,7 +29,8 @@ export default function MasterTable() {
     setIsAddProjectOpen = () => {},
     setIsAddCategoryOpen = () => {},
     deleteProject = () => {},
-    getProjectAlerts = () => []
+    getProjectAlerts = () => [],
+    isAuthorized = false
   } = useProject() || {};
 
   const [sortField, setSortField] = useState('id');
@@ -165,21 +167,30 @@ export default function MasterTable() {
 
         {/* Action Buttons: Add Project, New Category, Export */}
         <div className="flex items-center space-x-2">
-          <button
-            onClick={() => setIsAddProjectOpen?.(true)}
-            className="flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Add Project</span>
-          </button>
+          {isAuthorized ? (
+            <>
+              <button
+                onClick={() => setIsAddProjectOpen?.(true)}
+                className="flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Project</span>
+              </button>
 
-          <button
-            onClick={() => setIsAddCategoryOpen?.(true)}
-            className="flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
-          >
-            <Tag className="w-3.5 h-3.5 text-indigo-400" />
-            <span>New Category</span>
-          </button>
+              <button
+                onClick={() => setIsAddCategoryOpen?.(true)}
+                className="flex items-center space-x-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+              >
+                <Tag className="w-3.5 h-3.5 text-indigo-400" />
+                <span>New Category</span>
+              </button>
+            </>
+          ) : (
+            <div className="flex items-center space-x-1.5 text-xs text-slate-400 bg-slate-800/60 px-3 py-1.5 rounded-lg border border-slate-700/60">
+              <Lock className="w-3.5 h-3.5 text-amber-400" />
+              <span>Read-Only View</span>
+            </div>
+          )}
 
           <button
             onClick={exportToCSV}
@@ -411,27 +422,31 @@ export default function MasterTable() {
                           >
                             <Eye className="w-3.5 h-3.5" />
                           </button>
-                          <button
-                            onClick={(e) => handleQuickUpdate(p, e)}
-                            className="p-1 rounded hover:bg-slate-700 text-amber-400 hover:text-amber-300"
-                            title="Quick Progress Slider Update"
-                          >
-                            <Sliders className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={(e) => handleEdit(p, e)}
-                            className="p-1 rounded hover:bg-slate-700 text-blue-400 hover:text-blue-300"
-                            title="Edit Project"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={(e) => handleDelete(p?.id || pId, e)}
-                            className="p-1 rounded hover:bg-rose-900/40 text-rose-400 hover:text-rose-300"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {isAuthorized && (
+                            <>
+                              <button
+                                onClick={(e) => handleQuickUpdate(p, e)}
+                                className="p-1 rounded hover:bg-slate-700 text-amber-400 hover:text-amber-300"
+                                title="Quick Progress Slider Update"
+                              >
+                                <Sliders className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={(e) => handleEdit(p, e)}
+                                className="p-1 rounded hover:bg-slate-700 text-blue-400 hover:text-blue-300"
+                                title="Edit Project"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={(e) => handleDelete(p?.id || pId, e)}
+                                className="p-1 rounded hover:bg-rose-900/40 text-rose-400 hover:text-rose-300"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

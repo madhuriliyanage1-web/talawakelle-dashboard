@@ -634,10 +634,10 @@ function YearsTab() {
 
 // ─── Main SettingsModal ───────────────────────────────────────────────────────
 export default function SettingsModal() {
-  const { isSettingsOpen = false, setIsSettingsOpen = () => {}, gnds = [], ceoOfficers = [], categories = [], financialYears = [] } = useProject() || {};
+  const { isSettingsOpen = false, setIsSettingsOpen = () => {}, gnds = [], ceoOfficers = [], categories = [], financialYears = [], isAuthorized = false } = useProject() || {};
   const [activeTab, setActiveTab] = useState('gnds');
 
-  if (!isSettingsOpen) return null;
+  if (!isSettingsOpen || !isAuthorized) return null;
 
   const counts = {
     gnds: (gnds || []).length,

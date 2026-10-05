@@ -33,7 +33,8 @@ export default function ProjectDetailModal() {
     setIsAddEvidenceOpen = () => {},
     setEvidenceTargetProjectId = () => {},
     getProjectAlerts = () => [],
-    getCeoContact = () => ({})
+    getCeoContact = () => ({}),
+    isAuthorized = false
   } = useProject() || {};
 
   if (!isDetailOpen || !selectedProject) return null;
@@ -43,6 +44,10 @@ export default function ProjectDetailModal() {
   const projectPhotos = (evidence || []).filter(e => e?.projectId === selectedProject?.id || (selectedProject?.projectCode && e?.projectId === selectedProject?.projectCode));
 
   const handleStageClick = (stageName) => {
+    if (!isAuthorized) {
+      alert('Access Restricted: Read-Only mode. Only authorized administrators (madhuriliyanage1@gmail.com, dsplanningtalawakelle@gmail.com) can update workflow stages.');
+      return;
+    }
     let phys = Number(selectedProject?.physicalProgress ?? selectedProject?.progress ?? 0);
     let fin = Number(selectedProject?.financialProgress ?? 0);
     if (stageName === 'Completed') {
@@ -358,13 +363,15 @@ export default function ProjectDetailModal() {
                 <Camera className="w-3.5 h-3.5" />
                 <span>Attached Photographic Evidence Sequence ({(projectPhotos || []).length})</span>
               </h3>
-              <button
-                onClick={handleAddPhoto}
-                className="flex items-center space-x-1 text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-600/30"
-              >
-                <Plus className="w-3 h-3" />
-                <span>Add Photo</span>
-              </button>
+              {isAuthorized && (
+                <button
+                  onClick={handleAddPhoto}
+                  className="flex items-center space-x-1 text-xs font-semibold px-2.5 py-1 rounded-lg bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-600/30"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Add Photo</span>
+                </button>
+              )}
             </div>
 
             {(projectPhotos || []).length === 0 ? (
@@ -423,25 +430,29 @@ export default function ProjectDetailModal() {
           </div>
 
           <div className="flex items-center space-x-2">
-            <button
-              onClick={() => {
-                setIsQuickUpdateOpen?.(true);
-              }}
-              className="flex items-center space-x-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition"
-            >
-              <Sliders className="w-3.5 h-3.5" />
-              <span>Update Progress</span>
-            </button>
+            {isAuthorized && (
+              <>
+                <button
+                  onClick={() => {
+                    setIsQuickUpdateOpen?.(true);
+                  }}
+                  className="flex items-center space-x-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition"
+                >
+                  <Sliders className="w-3.5 h-3.5" />
+                  <span>Update Progress</span>
+                </button>
 
-            <button
-              onClick={() => {
-                setIsEditProjectOpen?.(true);
-              }}
-              className="flex items-center space-x-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
-            >
-              <Edit2 className="w-3.5 h-3.5 text-blue-400" />
-              <span>Edit Details</span>
-            </button>
+                <button
+                  onClick={() => {
+                    setIsEditProjectOpen?.(true);
+                  }}
+                  className="flex items-center space-x-1.5 text-xs font-semibold px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+                >
+                  <Edit2 className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Edit Details</span>
+                </button>
+              </>
+            )}
 
             <button
               onClick={() => closeProjectDetail?.()}

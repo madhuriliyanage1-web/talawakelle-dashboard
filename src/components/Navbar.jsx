@@ -15,7 +15,9 @@ import {
   Clock,
   Sparkles,
   ChevronDown,
-  Settings
+  Settings,
+  ShieldCheck,
+  Lock
 } from 'lucide-react';
 
 export default function Navbar({ activeTab, setActiveTab }) {
@@ -29,7 +31,10 @@ export default function Navbar({ activeTab, setActiveTab }) {
     setIsAddCeoOpen = () => {},
     setIsSettingsOpen = () => {},
     executiveMetrics = {},
-    SECRETARIAT_META = {}
+    SECRETARIAT_META = {},
+    isAuthorized = false,
+    currentUser = null,
+    setIsAuthModalOpen = () => {}
   } = useProject() || {};
 
   const [currentTime, setCurrentTime] = useState('');
@@ -153,50 +158,83 @@ export default function Navbar({ activeTab, setActiveTab }) {
               )}
             </div>
 
-            {/* Top Action Buttons: Settings, + GND, + CEO, + Category & Add Project */}
+            {/* Auth / Role Status Badge */}
             <button
-              onClick={() => setIsSettingsOpen?.(true)}
-              className="hidden md:flex items-center space-x-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 transition"
-              title="Settings & Master Configuration"
+              onClick={() => setIsAuthModalOpen?.(true)}
+              className={`flex items-center space-x-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-all ${
+                isAuthorized
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+                  : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white'
+              }`}
+              title={
+                isAuthorized
+                  ? `Authorized Admin: ${currentUser?.email}`
+                  : currentUser
+                  ? `Read-Only Mode: ${currentUser?.email} (Unauthorized)`
+                  : 'Read-Only Mode (Click to authenticate)'
+              }
             >
-              <Settings className="w-3.5 h-3.5 text-amber-400" />
-              <span>Settings</span>
+              {isAuthorized ? (
+                <>
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="hidden sm:inline">Admin</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-3.5 h-3.5 text-amber-400" />
+                  <span className="hidden sm:inline">Read-Only</span>
+                </>
+              )}
             </button>
 
-            <button
-              onClick={() => setIsAddGndOpen?.(true)}
-              className="hidden sm:flex items-center space-x-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 transition"
-              title="Add New Grama Niladhari Division"
-            >
-              <MapPin className="w-3.5 h-3.5 text-emerald-400" />
-              <span>+ GND</span>
-            </button>
+            {/* Top Action Buttons: Only accessible to Authorized Admin Emails */}
+            {isAuthorized && (
+              <>
+                <button
+                  onClick={() => setIsSettingsOpen?.(true)}
+                  className="hidden md:flex items-center space-x-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 transition"
+                  title="Settings & Master Configuration"
+                >
+                  <Settings className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Settings</span>
+                </button>
 
-            <button
-              onClick={() => setIsAddCeoOpen?.(true)}
-              className="hidden sm:flex items-center space-x-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 transition"
-              title="Add Community Empowerment Officer"
-            >
-              <UserCheck className="w-3.5 h-3.5 text-teal-400" />
-              <span>+ CEO</span>
-            </button>
+                <button
+                  onClick={() => setIsAddGndOpen?.(true)}
+                  className="hidden sm:flex items-center space-x-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 transition"
+                  title="Add New Grama Niladhari Division"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>+ GND</span>
+                </button>
 
-            <button
-              onClick={() => setIsAddCategoryOpen?.(true)}
-              className="hidden sm:flex items-center space-x-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 transition"
-              title="Add New Programme Category"
-            >
-              <Tag className="w-3.5 h-3.5 text-indigo-400" />
-              <span>+ Category</span>
-            </button>
+                <button
+                  onClick={() => setIsAddCeoOpen?.(true)}
+                  className="hidden sm:flex items-center space-x-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 transition"
+                  title="Add Community Empowerment Officer"
+                >
+                  <UserCheck className="w-3.5 h-3.5 text-teal-400" />
+                  <span>+ CEO</span>
+                </button>
 
-            <button
-              onClick={() => setIsAddProjectOpen?.(true)}
-              className="flex items-center space-x-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md transition"
-            >
-              <Plus className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
-              <span>New Project</span>
-            </button>
+                <button
+                  onClick={() => setIsAddCategoryOpen?.(true)}
+                  className="hidden sm:flex items-center space-x-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 transition"
+                  title="Add New Programme Category"
+                >
+                  <Tag className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>+ Category</span>
+                </button>
+
+                <button
+                  onClick={() => setIsAddProjectOpen?.(true)}
+                  className="flex items-center space-x-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md transition"
+                >
+                  <Plus className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
+                  <span>New Project</span>
+                </button>
+              </>
+            )}
           </div>
         </div>
 

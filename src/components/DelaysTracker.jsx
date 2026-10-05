@@ -21,7 +21,8 @@ export default function DelaysTracker() {
     openProjectDetail = () => {},
     setSelectedProject = () => {},
     setIsQuickUpdateOpen = () => {},
-    updateProject = () => {}
+    updateProject = () => {},
+    isAuthorized = false
   } = useProject() || {};
 
   const [filterSeverity, setFilterSeverity] = useState('all');
@@ -44,6 +45,10 @@ export default function DelaysTracker() {
   });
 
   const handleIntervention = (project, actionType) => {
+    if (!isAuthorized) {
+      alert('Access Restricted: Read-Only mode. Only authorized administrators (madhuriliyanage1@gmail.com, dsplanningtalawakelle@gmail.com) can issue notices or escalate projects.');
+      return;
+    }
     if (!project?.id) return;
     if (actionType === 'expedite') {
       updateProject?.(project.id, {
@@ -202,36 +207,42 @@ export default function DelaysTracker() {
                   </div>
                 </div>
 
-                {/* Quick Management Intervention Buttons */}
+                {/* Quick Management Intervention Buttons (Restricted to Authorized Admins) */}
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
-                  <div className="flex items-center space-x-1.5">
-                    <button
-                      onClick={() => handleIntervention(project, 'expedite')}
-                      className="flex items-center space-x-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 transition"
-                    >
-                      <Send className="w-3 h-3" />
-                      <span>Issue Notice</span>
-                    </button>
+                  {isAuthorized ? (
+                    <div className="flex items-center space-x-1.5">
+                      <button
+                        onClick={() => handleIntervention(project, 'expedite')}
+                        className="flex items-center space-x-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 transition"
+                      >
+                        <Send className="w-3 h-3" />
+                        <span>Issue Notice</span>
+                      </button>
 
-                    <button
-                      onClick={() => handleIntervention(project, 'escalate')}
-                      className="flex items-center space-x-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 transition"
-                    >
-                      <AlertOctagon className="w-3 h-3" />
-                      <span>Escalate to DS</span>
-                    </button>
+                      <button
+                        onClick={() => handleIntervention(project, 'escalate')}
+                        className="flex items-center space-x-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 transition"
+                      >
+                        <AlertOctagon className="w-3 h-3" />
+                        <span>Escalate to DS</span>
+                      </button>
 
-                    <button
-                      onClick={() => {
-                        setSelectedProject?.(project);
-                        setIsQuickUpdateOpen?.(true);
-                      }}
-                      className="flex items-center space-x-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
-                    >
-                      <Sliders className="w-3 h-3 text-emerald-400" />
-                      <span>Update %</span>
-                    </button>
-                  </div>
+                      <button
+                        onClick={() => {
+                          setSelectedProject?.(project);
+                          setIsQuickUpdateOpen?.(true);
+                        }}
+                        className="flex items-center space-x-1 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+                      >
+                        <Sliders className="w-3 h-3 text-emerald-400" />
+                        <span>Update %</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-slate-500 italic">
+                      Read-only audit view
+                    </div>
+                  )}
 
                   <button
                     onClick={() => openProjectDetail?.(project)}

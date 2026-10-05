@@ -8,7 +8,8 @@ export default function QuickUpdateProgressModal() {
     setIsQuickUpdateOpen = () => {},
     selectedProject = null,
     WORKFLOW_STAGES = [],
-    updateProgress = () => {}
+    updateProgress = () => {},
+    isAuthorized = false
   } = useProject() || {};
 
   const [physical, setPhysical] = useState(0);
@@ -25,7 +26,7 @@ export default function QuickUpdateProgressModal() {
     }
   }, [selectedProject]);
 
-  if (!isQuickUpdateOpen || !selectedProject) return null;
+  if (!isQuickUpdateOpen || !selectedProject || !isAuthorized) return null;
 
   const handleSubmit = (e) => {
     e.preventDefault();

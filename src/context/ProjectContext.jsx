@@ -15,7 +15,7 @@ import {
   COMMUNITY_EMPOWERMENT_OFFICERS
 } from '../data/mockData';
 import { normalizeGndString, isGndMatch } from '../utils/gndMatcher';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import {
   collection,
   doc,
@@ -27,6 +27,24 @@ import {
   writeBatch,
   addDoc
 } from 'firebase/firestore';
+import {
+  onAuthStateChanged,
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut,
+  signInWithEmailAndPassword
+} from 'firebase/auth';
+
+// ─── Authorized Administrative Emails ─────────────────────────────────────────
+export const AUTHORIZED_EMAILS = [
+  'madhuriliyanage1@gmail.com',
+  'dsplanningtalawakelle@gmail.com'
+];
+
+export const isAuthorizedEmail = (email) => {
+  if (!email) return false;
+  return AUTHORIZED_EMAILS.includes(String(email).trim().toLowerCase());
+};
 
 // ─── Internal Context Object ──────────────────────────────────────────────────
 const ProjectContext = createContext(null);
@@ -201,6 +219,39 @@ const clearCollection = async (colName) => {
 // ProjectProvider
 // ─────────────────────────────────────────────────────────────────────────────
 export function ProjectProvider({ children }) {
+  // ── Authentication & Authorization State ─────────────────────────────────
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  useEffect(() => {
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      setAuthLoading(false);
+    });
+    return () => unsubAuth();
+  }, []);
+
+  const isAuthorized = useMemo(() => {
+    return isAuthorizedEmail(currentUser?.email);
+  }, [currentUser]);
+
+  const loginWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    const res = await signInWithPopup(auth, provider);
+    return res.user;
+  };
+
+  const loginWithEmail = async (email, password) => {
+    const res = await signInWithEmailAndPassword(auth, email, password);
+    return res.user;
+  };
+
+  const logout = async () => {
+    await signOut(auth);
+  };
+
   // ── Core state (sourced from Firestore) ──────────────────────────────────
   const [projects, setProjects] = useState([]);
   const [gnds, setGnds] = useState([]);
@@ -639,6 +690,10 @@ export function ProjectProvider({ children }) {
   // ═══════════════════════════════════════════════════════════════════════════
 
   const addProject = async (projectData) => {
+    if (!isAuthorized) {
+      alert('Access Restricted: Read-Only mode. Only authorized administrators (madhuriliyanage1@gmail.com, dsplanningtalawakelle@gmail.com) can create projects.');
+      return;
+    }
     if (!projectData) return;
     try {
       const currentGnds = gndsRef.current || [];
@@ -698,6 +753,10 @@ export function ProjectProvider({ children }) {
   };
 
   const updateProject = async (id, updatedFields) => {
+    if (!isAuthorized) {
+      alert('Access Restricted: Read-Only mode. Only authorized administrators (madhuriliyanage1@gmail.com, dsplanningtalawakelle@gmail.com) can edit projects.');
+      return;
+    }
     if (!id || !updatedFields) return;
     try {
       const current = (projectsRef.current || []).find(p => p?.id === id || p?.projectCode === id);
@@ -751,6 +810,10 @@ export function ProjectProvider({ children }) {
   };
 
   const deleteProject = async (projectId) => {
+    if (!isAuthorized) {
+      alert('Access Restricted: Read-Only mode. Only authorized administrators (madhuriliyanage1@gmail.com, dsplanningtalawakelle@gmail.com) can delete projects.');
+      return;
+    }
     if (!projectId) return;
     // Resolve project doc ID if projectId is either p.id or p.projectCode
     const target = (projectsRef.current || []).find(
@@ -1375,7 +1438,18 @@ export function ProjectProvider({ children }) {
     isSettingsOpen,
     setIsSettingsOpen,
     evidenceTargetProjectId,
-    setEvidenceTargetProjectId
+    setEvidenceTargetProjectId,
+    // Auth & Permissions
+    currentUser,
+    authLoading,
+    isAuthorized,
+    AUTHORIZED_EMAILS,
+    isAuthorizedEmail,
+    loginWithGoogle,
+    loginWithEmail,
+    logout,
+    isAuthModalOpen,
+    setIsAuthModalOpen
   };
 
   return (
@@ -1465,7 +1539,17 @@ export function useProject() {
       isQuickUpdateOpen: false, setIsQuickUpdateOpen: () => {},
       isAddEvidenceOpen: false, setIsAddEvidenceOpen: () => {},
       isSettingsOpen: false, setIsSettingsOpen: () => {},
-      evidenceTargetProjectId: null, setEvidenceTargetProjectId: () => {}
+      evidenceTargetProjectId: null, setEvidenceTargetProjectId: () => {},
+      currentUser: null,
+      authLoading: false,
+      isAuthorized: false,
+      AUTHORIZED_EMAILS,
+      isAuthorizedEmail: () => false,
+      loginWithGoogle: async () => null,
+      loginWithEmail: async () => null,
+      logout: async () => {},
+      isAuthModalOpen: false,
+      setIsAuthModalOpen: () => {}
     };
   }
   return context;

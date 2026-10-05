@@ -15,7 +15,8 @@ export default function AddProjectModal() {
     SECRETARIAT_META = {},
     ceoOfficers = [],
     addProject = () => {},
-    updateProject = () => {}
+    updateProject = () => {},
+    isAuthorized = false
   } = useProject() || {};
 
   const isOpen = Boolean(isAddProjectOpen || isEditProjectOpen);
@@ -141,7 +142,7 @@ export default function AddProjectModal() {
     }
   }, [isEditing, selectedProject, isOpen, gnds, ceoOfficers]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !isAuthorized) return null;
 
   const handleClose = () => {
     setIsAddProjectOpen?.(false);

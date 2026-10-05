@@ -6,13 +6,14 @@ export default function AddCategoryModal() {
   const {
     isAddCategoryOpen = false,
     setIsAddCategoryOpen = () => {},
-    addCategory = () => {}
+    addCategory = () => {},
+    isAuthorized = false
   } = useProject() || {};
 
   const [categoryName, setCategoryName] = useState('');
   const [selectedColor, setSelectedColor] = useState('#10b981');
 
-  if (!isAddCategoryOpen) return null;
+  if (!isAddCategoryOpen || !isAuthorized) return null;
 
   const colorPalette = [
     '#10b981', // emerald

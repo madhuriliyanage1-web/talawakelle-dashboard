@@ -18,6 +18,7 @@ import AddCeoModal from './components/modals/AddCeoModal';
 import QuickUpdateProgressModal from './components/modals/QuickUpdateProgressModal';
 import AddEvidenceModal from './components/modals/AddEvidenceModal';
 import SettingsModal from './components/modals/SettingsModal';
+import AuthModal from './components/modals/AuthModal';
 
 function DashboardContent() {
   const [activeTab, setActiveTab] = useState('overall');
@@ -58,6 +59,7 @@ function DashboardContent() {
       <QuickUpdateProgressModal />
       <AddEvidenceModal />
       <SettingsModal />
+      <AuthModal />
     </div>
   );
 }

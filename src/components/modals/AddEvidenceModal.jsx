@@ -10,7 +10,8 @@ export default function AddEvidenceModal() {
     evidenceTargetProjectId = null,
     addEvidence = () => {},
     SECRETARIAT_META = {},
-    ceoOfficers = []
+    ceoOfficers = [],
+    isAuthorized = false
   } = useProject() || {};
 
   const [projectId, setProjectId] = useState(evidenceTargetProjectId || (projects || [])[0]?.id || '');
@@ -20,7 +21,7 @@ export default function AddEvidenceModal() {
   const [uploadedBy, setUploadedBy] = useState((ceoOfficers || [])[0] || (SECRETARIAT_META?.officers || [])[0] || 'Technical Officer');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
-  if (!isAddEvidenceOpen) return null;
+  if (!isAddEvidenceOpen || !isAuthorized) return null;
 
   // Preset sample photo choices for convenient one-click selection
   const sampleSuggestions = [

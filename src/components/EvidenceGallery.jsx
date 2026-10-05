@@ -11,7 +11,8 @@ import {
   Layers,
   ChevronRight,
   ExternalLink,
-  Search
+  Search,
+  Lock
 } from 'lucide-react';
 
 export default function EvidenceGallery(props = {}) {
@@ -22,6 +23,7 @@ export default function EvidenceGallery(props = {}) {
   const setIsAddEvidenceOpen = props.setIsAddEvidenceOpen ?? context.setIsAddEvidenceOpen ?? (() => {});
   const setEvidenceTargetProjectId = props.setEvidenceTargetProjectId ?? context.setEvidenceTargetProjectId ?? (() => {});
   const openProjectDetail = props.openProjectDetail ?? context.openProjectDetail ?? (() => {});
+  const isAuthorized = props.isAuthorized ?? context.isAuthorized ?? false;
 
   const [phaseFilter, setPhaseFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -92,13 +94,20 @@ export default function EvidenceGallery(props = {}) {
           </p>
         </div>
 
-        <button
-          onClick={handleAddPhoto}
-          className="flex items-center space-x-1.5 text-xs font-semibold px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg transition"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Upload Evidence</span>
-        </button>
+        {isAuthorized ? (
+          <button
+            onClick={handleAddPhoto}
+            className="flex items-center space-x-1.5 text-xs font-semibold px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg transition"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Upload Evidence</span>
+          </button>
+        ) : (
+          <div className="flex items-center space-x-1.5 text-xs text-slate-400 bg-slate-800/80 px-3 py-2 rounded-xl border border-slate-700">
+            <Lock className="w-3.5 h-3.5 text-amber-400" />
+            <span>Read-Only Mode</span>
+          </div>
+        )}
       </div>
 
       {/* Filter Tabs: Project Selector & Phase Filters */}
